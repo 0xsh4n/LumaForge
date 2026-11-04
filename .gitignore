@@ -1,0 +1,32 @@
+# ---- Python ----
+.venv/
+.venv-probe/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Node / frontend ----
+node_modules/
+desktop/dist/
+desktop/.vite/
+*.local
+
+# ---- Rust / Tauri ----
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
+# ---- LumaForge runtime ----
+models/*/           # downloaded AI model weights (managed at runtime)
+!models/.gitkeep
+cache/
+*.log
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

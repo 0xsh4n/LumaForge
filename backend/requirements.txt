@@ -1,0 +1,20 @@
+# LumaForge backend — core runtime (Phase 1).
+# These are the only dependencies required for the application to run and for
+# all manual / classical image-processing features to work. Heavy AI model
+# dependencies live in requirements-ai.txt and are installed on demand for
+# Phase 2+ features.
+
+numpy>=1.26
+pillow>=10.3
+opencv-python-headless>=4.9
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+pydantic-settings>=2.2
+python-multipart>=0.0.9
+
+# Optional format support. These are "best effort": the backend detects at
+# runtime whether they imported successfully and reports the capability to the
+# UI. If a wheel is unavailable for your Python version the app still runs,
+# just without that format.
+pillow-heif>=0.16 ; platform_system != "Windows" or python_version < "3.14"
