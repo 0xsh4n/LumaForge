@@ -1,0 +1,129 @@
+name: CI
+
+# Runs the test suite on every push/PR. Builds native installers for all three
+# platforms on tags (v*) or manual dispatch — each on its own OS, because a
+# Windows .msi can only be built on Windows, a .dmg on macOS, etc.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (backend + frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install backend deps
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -r backend/requirements.txt
+          .venv/bin/python -m pip install pytest httpx
+
+      - name: Run backend tests
+        working-directory: backend
+        run: ../.venv/bin/python -m pytest -q
+
+      - name: Build frontend (typecheck + bundle)
+        working-directory: desktop
+        run: |
+          npm ci
+          npm run build
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+            bundles: "desktop/src-tauri/target/release/bundle/msi/*.msi,desktop/src-tauri/target/release/bundle/nsis/*-setup.exe"
+          - os: macos-latest
+            name: macOS
+            bundles: "desktop/src-tauri/target/release/bundle/dmg/*.dmg"
+          - os: ubuntu-latest
+            name: Linux
+            bundles: "desktop/src-tauri/target/release/bundle/deb/*.deb,desktop/src-tauri/target/release/bundle/appimage/*.AppImage"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system deps (Tauri)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf build-essential libssl-dev libgtk-3-dev
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
+
+      - name: Set up Python venv + deps
+        shell: bash
+        run: |
+          python -m venv .venv
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then PY=.venv/Scripts/python; else PY=.venv/bin/python; fi
+          $PY -m pip install --upgrade pip
+          $PY -m pip install -r backend/requirements.txt pyinstaller
+
+      - name: Build backend sidecar
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            pwsh scripts/build_sidecar.ps1
+          else
+            bash scripts/build_sidecar.sh
+          fi
+
+      - name: Install frontend deps
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build native app (Tauri)
+        working-directory: desktop
+        run: npm run tauri:build
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumaforge-${{ matrix.name }}
+          path: ${{ matrix.bundles }}
+          if-no-files-found: warn
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.bundles }}
+          fail_on_unmatched_files: false

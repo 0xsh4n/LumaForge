@@ -115,10 +115,20 @@ comparison, presets, settings/compatibility report, and high-quality export.
   Download/install/remove, status/size/compatibility, runtime & GPU-layer
   selection. Everything works with **no VLM installed**.
 
-## Phase 8 — Packaging, cross-platform & release
+## ✅ Phase 8 — Packaging, cross-platform & release *(pipeline complete)*
 
-Windows installer (`.msi` / NSIS), Linux (`.deb`/AppImage), macOS (`.dmg`),
-full test suite, user & developer documentation. *(Spec §16 Phase 7.)*
+- **Cross-platform CI** (`.github/workflows/ci.yml`): test job on every push/PR;
+  installer builds on `windows-latest` (`.msi` + NSIS), `macos-latest` (`.dmg`)
+  and `ubuntu-latest` (`.deb` + AppImage) on tags / manual dispatch, attached to
+  a GitHub Release. *(Spec §16 Phase 7.)*
+- **Sidecar packaging validated end-to-end** on Linux: PyInstaller produces a
+  single ~116 MB executable bundling OpenCV + NumPy + rawpy/LibRaw + FastAPI that
+  serves every endpoint and processes images. Placed where Tauri expects it;
+  Cargo manifest resolves.
+- Release & signing guide in [RELEASE.md](RELEASE.md).
+- Remaining before a public 1.0: run the CI on the three OSes to emit signed
+  installers (code-signing secrets), and smoke-test the packaged app on a Windows
+  GTX 1650 machine.
 
 ---
 

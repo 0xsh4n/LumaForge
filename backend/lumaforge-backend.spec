@@ -19,6 +19,17 @@ for pkg in ("cv2", "numpy", "PIL", "uvicorn", "fastapi", "starlette",
     binaries += b
     hiddenimports += h
 
+# Optional codecs — collect only if installed (rawpy bundles LibRaw's shared lib;
+# pillow_heif bundles libheif). Missing ones are simply skipped.
+for pkg in ("rawpy", "pillow_heif"):
+    try:
+        d, b, h = collect_all(pkg)
+        datas += d
+        binaries += b
+        hiddenimports += h
+    except Exception:
+        pass
+
 # uvicorn selects its protocol/loop implementations at runtime.
 hiddenimports += collect_submodules("uvicorn")
 hiddenimports += [

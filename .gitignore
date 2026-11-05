@@ -8,6 +8,14 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# ---- PyInstaller (sidecar build output) ----
+backend/build/
+backend/dist/
+
+# ---- Tauri sidecar binaries (built per-platform, not committed) ----
+desktop/src-tauri/binaries/*
+!desktop/src-tauri/binaries/README.md
+
 # ---- Node / frontend ----
 node_modules/
 desktop/dist/

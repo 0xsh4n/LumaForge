@@ -72,6 +72,9 @@ Outputs:
 - **Linux** → `.../bundle/deb/*.deb`, `.../bundle/appimage/*.AppImage`
 - **macOS** → `.../bundle/dmg/*.dmg`
 
+For automated cross-platform release builds (GitHub Actions) and code-signing
+notes, see [RELEASE.md](RELEASE.md).
+
 The sidecar step alone:
 
 ```bash
