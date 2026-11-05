@@ -1,8 +1,16 @@
 name: CI
 
-# Runs the test suite on every push/PR. Builds native installers for all three
-# platforms on tags (v*) or manual dispatch — each on its own OS, because a
-# Windows .msi can only be built on Windows, a .dmg on macOS, etc.
+# What this does:
+#   * test   — runs backend + frontend checks on every push/PR (fast gate).
+#   * build  — on a v* tag or manual dispatch, builds native installers for all
+#              three platforms (each on its own OS, because a .msi needs Windows,
+#              a .dmg needs macOS, etc.) and uploads them as workflow artifacts.
+#   * release — on a v* tag only, gathers every platform's installers and
+#              publishes ONE GitHub Release with them attached.
+#
+# The release is a SEPARATE job (not done inside the per-OS matrix) so there is a
+# single writer to the release — no three-way race — and it holds the one place
+# that needs `contents: write`.
 
 on:
   push:
@@ -12,10 +20,21 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Least privilege by default; the release job opts into write below.
+permissions:
+  contents: read
+
+# Don't pile up redundant runs. Never cancel a tag/main build (a release must
+# finish); only superseded PR runs get cancelled.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: Test (backend + frontend)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,19 +67,26 @@ jobs:
     name: Build ${{ matrix.name }}
     needs: test
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             name: Windows
-            bundles: "desktop/src-tauri/target/release/bundle/msi/*.msi,desktop/src-tauri/target/release/bundle/nsis/*-setup.exe"
+            bundles: |
+              desktop/src-tauri/target/release/bundle/msi/*.msi
+              desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
           - os: macos-latest
             name: macOS
-            bundles: "desktop/src-tauri/target/release/bundle/dmg/*.dmg"
+            bundles: |
+              desktop/src-tauri/target/release/bundle/dmg/*.dmg
           - os: ubuntu-latest
             name: Linux
-            bundles: "desktop/src-tauri/target/release/bundle/deb/*.deb,desktop/src-tauri/target/release/bundle/appimage/*.AppImage"
+            bundles: |
+              desktop/src-tauri/target/release/bundle/deb/*.deb
+              desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+              desktop/src-tauri/target/release/bundle/rpm/*.rpm
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +104,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
@@ -87,7 +115,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             desktop/src-tauri/target
-          key: ${{ matrix.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.os }}-cargo-
 
       - name: Set up Python venv + deps
         shell: bash
@@ -119,11 +149,52 @@ jobs:
         with:
           name: lumaforge-${{ matrix.name }}
           path: ${{ matrix.bundles }}
-          if-no-files-found: warn
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
+  release:
+    name: Publish GitHub Release
+    needs: build
+    # Run even if a platform failed, so the installers that DID build still get
+    # published — but only for a version tag. The verify step below fails the
+    # job if nothing at all was produced.
+    if: always() && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Download all installers
+        uses: actions/download-artifact@v4
+        with:
+          path: installers
+
+      - name: List and verify installers
+        run: |
+          echo "Downloaded files:"
+          find installers -type f -printf '  %p  (%s bytes)\n' || true
+          count=$(find installers -type f \
+            \( -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
+               -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' \) | wc -l)
+          echo "Installer count: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No installer artifacts were produced — refusing to publish an empty release."
+            exit 1
+          fi
+
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.bundles }}
+          files: |
+            installers/**/*.msi
+            installers/**/*.exe
+            installers/**/*.dmg
+            installers/**/*.deb
+            installers/**/*.AppImage
+            installers/**/*.rpm
+          # Individual patterns may match nothing on a given run (e.g. no .rpm);
+          # that's fine — the verify step already guaranteed at least one file.
           fail_on_unmatched_files: false
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
