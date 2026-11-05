@@ -18,7 +18,6 @@ interface Tool {
 }
 
 const AI_TOOLS: Tool[] = [
-  { label: "AI Auto Enhance", icon: IconWand, phase: 2 },
   { label: "AI Portrait Retouch", icon: IconFace, phase: 3 },
 ];
 
@@ -54,6 +53,8 @@ export default function LeftToolbar() {
   const importing = useEditor((s) => s.importing);
   const importError = useEditor((s) => s.importError);
   const hasImage = useEditor((s) => !!s.image);
+  const openAutoEnhance = useEditor((s) => s.openAutoEnhance);
+  const autoOpen = useEditor((s) => s.autoEnhance.open);
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col border-r border-ink-600 bg-ink-800">
@@ -73,6 +74,21 @@ export default function LeftToolbar() {
 
       <div className="lf-scroll flex-1 overflow-y-auto px-2 pb-4">
         <ToolSection title="AI Tools">
+          <button
+            onClick={() => void openAutoEnhance()}
+            disabled={!hasImage}
+            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition-colors disabled:opacity-40 ${
+              autoOpen
+                ? "bg-forge-500/15 text-forge-300"
+                : "text-mist-200 hover:bg-ink-700"
+            }`}
+          >
+            <IconWand width={18} height={18} className="shrink-0" />
+            <span className="flex-1 truncate">AI Auto Enhance</span>
+            <span className="rounded bg-forge-500/20 px-1.5 py-0.5 text-[10px] font-medium text-forge-300">
+              New
+            </span>
+          </button>
           {AI_TOOLS.map((t) => (
             <UpcomingTool key={t.label} tool={t} />
           ))}
@@ -84,8 +100,8 @@ export default function LeftToolbar() {
         </ToolSection>
 
         <p className="mt-3 px-3 text-[11px] leading-relaxed text-mist-500">
-          AI enhancement and masking tools unlock in later phases. Phase 1 ships
-          the full manual editing engine, import/preview and high-quality export.
+          Auto Enhance is live. Portrait retouching and masking tools unlock in
+          later phases — each produces editable adjustments, never destructive filters.
         </p>
       </div>
     </aside>

@@ -3,6 +3,7 @@ import LeftToolbar from "../editor/LeftToolbar";
 import PreviewCanvas from "../editor/PreviewCanvas";
 import AdjustPanel from "../editor/AdjustPanel";
 import BottomBar from "../editor/BottomBar";
+import AutoEnhancePanel from "../editor/AutoEnhancePanel";
 import { IconClose } from "../components/icons";
 
 export default function EditorSection() {
@@ -36,6 +37,7 @@ export default function EditorSection() {
           )}
           <div className="relative min-h-0 flex-1">
             <PreviewCanvas />
+            <AutoEnhancePanel />
           </div>
         </div>
         <AdjustPanel />

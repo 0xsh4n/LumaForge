@@ -3,12 +3,6 @@ import { IconWand, IconFace, IconSubject, IconSparkles, IconImport } from "../co
 
 const FEATURES = [
   {
-    icon: IconWand,
-    name: "AI Auto Enhance",
-    phase: 2,
-    body: "Analyzes exposure, white balance, contrast and dynamic range to generate an adaptive, per-image enhancement profile — Natural, Professional or Cinematic.",
-  },
-  {
     icon: IconFace,
     name: "AI Portrait Retouch",
     phase: 3,
@@ -32,6 +26,7 @@ export default function AIEnhanceSection() {
   const analysis = useEditor((s) => s.analysis);
   const image = useEditor((s) => s.image);
   const importImage = useEditor((s) => s.importImage);
+  const openAutoEnhance = useEditor((s) => s.openAutoEnhance);
 
   return (
     <div className="lf-scroll h-full overflow-y-auto">
@@ -84,6 +79,30 @@ export default function AIEnhanceSection() {
               />
             </div>
           )}
+        </section>
+
+        {/* Auto Enhance — live */}
+        <section className="mt-6 lf-card relative overflow-hidden p-5">
+          <span className="absolute right-4 top-4 rounded bg-forge-500/20 px-2 py-0.5 text-[11px] font-medium text-forge-300">
+            Available
+          </span>
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-forge-500/15 text-forge-400">
+            <IconWand width={20} height={20} />
+          </div>
+          <div className="text-base font-medium text-mist-100">AI Auto Enhance</div>
+          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-mist-500">
+            Analyzes exposure, white balance, contrast and dynamic range to generate an
+            adaptive, per-image enhancement profile — Natural, Professional or Cinematic.
+            Every value lands in the editor and stays fully editable.
+          </p>
+          <button
+            onClick={() => void openAutoEnhance()}
+            disabled={!image}
+            className="lf-btn-primary mt-4 disabled:opacity-50"
+          >
+            <IconWand width={16} height={16} />
+            {image ? "Open Auto Enhance" : "Import a photo first"}
+          </button>
         </section>
 
         {/* Roadmap */}

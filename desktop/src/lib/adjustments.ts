@@ -32,6 +32,20 @@ export function isNeutral(a: Adjustments): boolean {
   return JSON.stringify(a) === JSON.stringify(n);
 }
 
+/** Linear interpolation between two adjustment sets (used by the strength slider). */
+export function lerpAdjustments(a: Adjustments, b: Adjustments, t: number): Adjustments {
+  const out = neutralAdjustments();
+  (Object.keys(out) as (keyof Adjustments)[]).forEach((group) => {
+    const ga = a[group] as unknown as Record<string, number>;
+    const gb = b[group] as unknown as Record<string, number>;
+    const go = out[group] as unknown as Record<string, number>;
+    Object.keys(go).forEach((k) => {
+      go[k] = +(ga[k] + (gb[k] - ga[k]) * t).toFixed(2);
+    });
+  });
+  return out;
+}
+
 export interface SliderSpec {
   key: string;
   label: string;

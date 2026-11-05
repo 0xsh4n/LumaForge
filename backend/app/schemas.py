@@ -130,6 +130,21 @@ class ImageAnalysis(BaseModel):
     histogram: Histogram
 
 
+class AutoEnhanceRequest(BaseModel):
+    mode: Literal["natural", "professional", "cinematic"] = "natural"
+    strength: float = Field(100.0, ge=0, le=100)
+
+
+class AutoEnhanceResult(BaseModel):
+    """An editable enhancement profile derived from image analysis."""
+
+    adjustments: Adjustments
+    mode: str
+    strength: float
+    notes: list[str]
+    scene: dict
+
+
 class ProjectFile(BaseModel):
     """On-disk project (.lfp) — original reference + parameters only."""
 

@@ -3,12 +3,15 @@ import { api, ApiError } from "../lib/api";
 import {
   cloneAdjustments,
   isNeutral,
+  lerpAdjustments,
   neutralAdjustments,
 } from "../lib/adjustments";
 import { pickImageToImport, pickSavePath, downloadBlob, isTauri } from "../lib/platform";
 import type {
   Adjustments,
   AdjustGroup,
+  AutoEnhanceResult,
+  AutoMode,
   ExportFormat,
   HardwareReport,
   ImageAnalysis,
@@ -29,6 +32,16 @@ const PREVIEW_MAXDIM: Record<PreviewQuality, number> = {
 interface ExportState {
   state: "idle" | "exporting" | "done" | "error";
   message?: string;
+}
+
+interface AutoEnhanceState {
+  open: boolean;
+  mode: AutoMode;
+  strength: number;
+  loading: boolean;
+  error: string | null;
+  notes: string[];
+  scene: AutoEnhanceResult["scene"] | null;
 }
 
 interface EditorState {
@@ -58,6 +71,8 @@ interface EditorState {
   fitToScreen: boolean;
   previewQuality: PreviewQuality;
 
+  autoEnhance: AutoEnhanceState;
+
   // --- actions ---
   setSection: (s: Section) => void;
   initBackend: () => Promise<void>;
@@ -70,7 +85,14 @@ interface EditorState {
   beginGesture: () => void;
   setAdjustment: (group: AdjustGroup, key: string, value: number) => void;
   endGesture: () => void;
+  cancelGesture: () => void;
   applyAdjustments: (next: Adjustments, label?: string) => void;
+
+  openAutoEnhance: () => Promise<void>;
+  setAutoMode: (mode: AutoMode) => void;
+  setAutoStrength: (strength: number) => void;
+  applyAutoEnhance: () => void;
+  cancelAutoEnhance: () => void;
 
   undo: () => void;
   redo: () => void;
@@ -95,6 +117,52 @@ let renderSeq = 0;
 let inflight: AbortController | null = null;
 let gestureSnapshot: Adjustments | null = null;
 
+// Auto Enhance: full-strength profiles per mode, cached per image so the
+// strength slider can interpolate instantly without re-hitting the backend.
+let autoProfiles: Partial<Record<AutoMode, AutoEnhanceResult>> = {};
+
+async function applyAuto(
+  get: () => EditorState,
+  set: (p: Partial<EditorState>) => void,
+  mode: AutoMode,
+  strength: number,
+) {
+  const { image, autoEnhance } = get();
+  if (!image) return;
+  let profile = autoProfiles[mode];
+  if (!profile) {
+    set({ autoEnhance: { ...autoEnhance, mode, strength, loading: true, error: null } });
+    try {
+      profile = await api.autoEnhance(image.id, mode, 100);
+      autoProfiles[mode] = profile;
+    } catch (e) {
+      set({
+        autoEnhance: {
+          ...get().autoEnhance,
+          loading: false,
+          error: e instanceof ApiError ? e.message : "Auto Enhance failed",
+        },
+      });
+      return;
+    }
+  }
+  if (!get().autoEnhance.open) return; // panel closed while fetching
+  const next = lerpAdjustments(neutralAdjustments(), profile.adjustments, strength / 100);
+  set({
+    adjustments: next,
+    autoEnhance: {
+      ...get().autoEnhance,
+      mode,
+      strength,
+      loading: false,
+      error: null,
+      notes: profile.notes,
+      scene: profile.scene,
+    },
+  });
+  scheduleRender(get, set, 0);
+}
+
 function scheduleRender(get: () => EditorState, set: (p: Partial<EditorState>) => void, delay = 110) {
   if (renderTimer) window.clearTimeout(renderTimer);
   renderTimer = window.setTimeout(() => void doRender(get, set), delay);
@@ -107,6 +175,8 @@ function loadMeta(
 ) {
   const oldPreview = get().previewUrl;
   if (oldPreview) URL.revokeObjectURL(oldPreview);
+  autoProfiles = {};
+  gestureSnapshot = null;
   set({
     image: meta,
     adjustments: neutralAdjustments(),
@@ -121,6 +191,15 @@ function loadMeta(
     importing: false,
     section: "editor",
     exportState: { state: "idle" },
+    autoEnhance: {
+      open: false,
+      mode: "natural",
+      strength: 100,
+      loading: false,
+      error: null,
+      notes: [],
+      scene: null,
+    },
   });
   scheduleRender(get, set, 0);
   api.analyze(meta.id).then((a) => set({ analysis: a })).catch(() => {});
@@ -179,6 +258,16 @@ export const useEditor = create<EditorState>((set, get) => ({
   zoom: 1,
   fitToScreen: true,
   previewQuality: "standard",
+
+  autoEnhance: {
+    open: false,
+    mode: "natural",
+    strength: 100,
+    loading: false,
+    error: null,
+    notes: [],
+    scene: null,
+  },
 
   setSection: (s) => set({ section: s }),
 
@@ -275,6 +364,14 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ past: [...get().past, snapshot], future: [] });
   },
 
+  cancelGesture: () => {
+    if (!gestureSnapshot) return;
+    const snapshot = gestureSnapshot;
+    gestureSnapshot = null;
+    set({ adjustments: cloneAdjustments(snapshot) });
+    scheduleRender(get, set, 0);
+  },
+
   applyAdjustments: (next) => {
     set({
       past: [...get().past, cloneAdjustments(get().adjustments)],
@@ -282,6 +379,45 @@ export const useEditor = create<EditorState>((set, get) => ({
       adjustments: cloneAdjustments(next),
     });
     scheduleRender(get, set, 0);
+  },
+
+  openAutoEnhance: async () => {
+    if (!get().image) return;
+    autoProfiles = {};
+    get().beginGesture(); // snapshot current edits → one undo step for the session
+    set({
+      section: "editor",
+      autoEnhance: {
+        open: true,
+        mode: "natural",
+        strength: 100,
+        loading: true,
+        error: null,
+        notes: [],
+        scene: null,
+      },
+    });
+    await applyAuto(get, set, "natural", 100);
+  },
+
+  setAutoMode: (mode) => {
+    if (!get().autoEnhance.open) return;
+    void applyAuto(get, set, mode, get().autoEnhance.strength);
+  },
+
+  setAutoStrength: (strength) => {
+    if (!get().autoEnhance.open) return;
+    void applyAuto(get, set, get().autoEnhance.mode, strength);
+  },
+
+  applyAutoEnhance: () => {
+    get().endGesture(); // commits the session as a single undoable step
+    set({ autoEnhance: { ...get().autoEnhance, open: false } });
+  },
+
+  cancelAutoEnhance: () => {
+    get().cancelGesture();
+    set({ autoEnhance: { ...get().autoEnhance, open: false } });
   },
 
   undo: () => {

@@ -18,12 +18,16 @@ comparison, presets, settings/compatibility report, and high-quality export.
 
 ---
 
-## Phase 2 — Auto Enhance & analysis *(classical, no models)*
+## ✅ Phase 2 — Auto Enhance & analysis *(complete)*
 
 - Adaptive per-image analysis → enhancement profile (Natural / Professional /
-  Cinematic) with a strength slider; every value remains manually editable. *(§4)*
-- Adaptive exposure, white-balance, contrast, dynamic-range and sharpening
-  derived from the Phase-1 `analyze()` statistics. *(§4, §9)*
+  Cinematic) with a strength slider; every value lands in the sliders and
+  remains manually editable. One-undo-step, non-destructive. *(§4)*
+- Adaptive exposure, white-balance, black/white points, highlight/shadow
+  recovery, contrast, vibrance, dehaze and noise-aware sharpening derived from
+  robust scene statistics. Returns editable `Adjustments` + a plain-language
+  summary of what it did. *(§4, §9)*
+- `POST /api/images/{id}/auto-enhance`; 11 dedicated tests.
 
 ## Phase 2b — Color Grading Studio *(classical, no models)*  *(§22)*
 

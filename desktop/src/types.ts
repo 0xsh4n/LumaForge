@@ -118,3 +118,18 @@ export interface ExportResult {
 }
 
 export type ExportFormat = "jpeg" | "png" | "webp" | "tiff";
+
+export type AutoMode = "natural" | "professional" | "cinematic";
+
+export interface AutoEnhanceResult {
+  adjustments: Adjustments;
+  mode: string;
+  strength: number;
+  notes: string[];
+  scene: {
+    mean_luma: number;
+    contrast: number;
+    cast: string;
+    noisy: boolean;
+  };
+}

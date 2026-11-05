@@ -1,6 +1,8 @@
 // Thin typed client for the local LumaForge backend.
 import type {
   Adjustments,
+  AutoEnhanceResult,
+  AutoMode,
   ExportFormat,
   ExportResult,
   HardwareReport,
@@ -156,6 +158,13 @@ export const api = {
         embed_srgb_profile: true,
         adjustments,
       }),
+    });
+  },
+
+  async autoEnhance(id: string, mode: AutoMode, strength: number): Promise<AutoEnhanceResult> {
+    return jsonFetch(`/api/images/${id}/auto-enhance`, {
+      method: "POST",
+      body: JSON.stringify({ mode, strength }),
     });
   },
 
