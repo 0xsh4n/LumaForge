@@ -17,9 +17,7 @@ interface Tool {
   phase: number;
 }
 
-const AI_TOOLS: Tool[] = [
-  { label: "AI Portrait Retouch", icon: IconFace, phase: 3 },
-];
+const AI_TOOLS: Tool[] = [];
 
 const MASK_TOOLS: Tool[] = [
   { label: "Subject Mask", icon: IconSubject, phase: 4 },
@@ -55,6 +53,8 @@ export default function LeftToolbar() {
   const hasImage = useEditor((s) => !!s.image);
   const openAutoEnhance = useEditor((s) => s.openAutoEnhance);
   const autoOpen = useEditor((s) => s.autoEnhance.open);
+  const openPortrait = useEditor((s) => s.openPortrait);
+  const portraitOpen = useEditor((s) => s.portrait.open);
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col border-r border-ink-600 bg-ink-800">
@@ -85,6 +85,19 @@ export default function LeftToolbar() {
           >
             <IconWand width={18} height={18} className="shrink-0" />
             <span className="flex-1 truncate">AI Auto Enhance</span>
+            <span className="rounded bg-forge-500/20 px-1.5 py-0.5 text-[10px] font-medium text-forge-300">
+              New
+            </span>
+          </button>
+          <button
+            onClick={() => void openPortrait()}
+            disabled={!hasImage}
+            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition-colors disabled:opacity-40 ${
+              portraitOpen ? "bg-forge-500/15 text-forge-300" : "text-mist-200 hover:bg-ink-700"
+            }`}
+          >
+            <IconFace width={18} height={18} className="shrink-0" />
+            <span className="flex-1 truncate">AI Portrait Retouch</span>
             <span className="rounded bg-forge-500/20 px-1.5 py-0.5 text-[10px] font-medium text-forge-300">
               New
             </span>

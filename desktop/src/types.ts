@@ -32,6 +32,96 @@ export interface DetailAdjust {
 export interface EffectsAdjust {
   vignette: number; // -100..100
   grain: number; // 0..100
+  defringe: number; // 0..100 (CA fringe reduction)
+  distortion: number; // -100..100 (barrel/pincushion correction)
+}
+
+export type RawWbMode = "camera" | "auto" | "daylight";
+export type DemosaicAlgo = "AHD" | "VNG" | "DCB" | "AAHD" | "LMMSE" | "DHT" | "LINEAR";
+
+export interface RawParams {
+  wb_mode: RawWbMode;
+  exposure: number; // -2..3 EV at RAW stage
+  highlight_mode: number; // 0..5
+  demosaic: DemosaicAlgo;
+  noise_reduction: number; // 0..2
+}
+
+export type CurvePoint = [number, number];
+
+export interface CurvesAdjust {
+  rgb: CurvePoint[];
+  red: CurvePoint[];
+  green: CurvePoint[];
+  blue: CurvePoint[];
+}
+
+export interface HSLBand {
+  hue: number;
+  saturation: number;
+  luminance: number;
+}
+
+export type HSLBandName =
+  | "red" | "orange" | "yellow" | "green"
+  | "aqua" | "blue" | "purple" | "magenta";
+
+export type HSLAdjust = Record<HSLBandName, HSLBand>;
+
+export interface ColorWheel {
+  r: number;
+  g: number;
+  b: number;
+  luminance: number;
+}
+
+export interface ColorBalance {
+  shadows: ColorWheel;
+  midtones: ColorWheel;
+  highlights: ColorWheel;
+  globe: ColorWheel;
+}
+
+export interface SplitTone {
+  shadow_hue: number;
+  shadow_sat: number;
+  highlight_hue: number;
+  highlight_sat: number;
+  balance: number;
+}
+
+export interface Grade {
+  curves: CurvesAdjust;
+  hsl: HSLAdjust;
+  color_balance: ColorBalance;
+  split_tone: SplitTone;
+  lut_id: string | null;
+  lut_intensity: number;
+}
+
+export interface PortraitAdjust {
+  enabled: boolean;
+  skin_smoothing: number;
+  texture_preservation: number;
+  blemish_removal: number;
+  eye_enhance: number;
+  eye_brightness: number;
+  teeth_whiten: number;
+  face_exposure: number;
+  face_sharpen: number;
+  hair_enhance: number;
+  under_eye: number;
+  face_noise_reduction: number;
+  background_exposure: number;
+  background_saturation: number;
+  intensity: number;
+  naturalness: number;
+}
+
+export interface PortraitMode {
+  id: string;
+  label: string;
+  params: PortraitAdjust;
 }
 
 export interface Adjustments {
@@ -39,6 +129,15 @@ export interface Adjustments {
   color: ColorAdjust;
   detail: DetailAdjust;
   effects: EffectsAdjust;
+  grade: Grade;
+  portrait: PortraitAdjust;
+}
+
+export interface LutInfo {
+  id: string;
+  name: string;
+  dim: number;
+  size: number;
 }
 
 export type AdjustGroup = keyof Adjustments;
@@ -54,6 +153,8 @@ export interface ImageMeta {
   format: string;
   megapixels: number;
   exif: Record<string, string>;
+  is_raw: boolean;
+  raw_params: RawParams | null;
 }
 
 export interface Histogram {

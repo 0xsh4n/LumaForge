@@ -13,8 +13,14 @@ pydantic>=2.6
 pydantic-settings>=2.2
 python-multipart>=0.0.9
 
-# Optional format support. These are "best effort": the backend detects at
-# runtime whether they imported successfully and reports the capability to the
-# UI. If a wheel is unavailable for your Python version the app still runs,
-# just without that format.
+# RAW / DNG development (Phase 2c) — LibRaw via rawpy. RAW support is a core
+# feature; the wheel bundles LibRaw.
+rawpy>=0.19
+
+# Optional format support. Best effort: the backend detects at runtime whether
+# it imported and reports the capability to the UI. If a wheel is unavailable
+# for your Python version the app still runs, just without that format.
 pillow-heif>=0.16 ; platform_system != "Windows" or python_version < "3.14"
+
+# Note: face detection (Phase 3) uses OpenCV's bundled YuNet; its small ONNX
+# model is downloaded once at first use to the app's models directory.

@@ -297,6 +297,55 @@ def apply_vignette(img: np.ndarray, amount: float) -> np.ndarray:
     return np.clip(img * factor, 0.0, 1.0)
 
 
+def apply_defringe(img: np.ndarray, amount: float, px_scale: float = 1.0) -> np.ndarray:
+    """Reduce chromatic-aberration colour fringing on high-contrast edges.
+
+    Desaturates toward luminance only where strong luminance edges live, so flat
+    colour areas are untouched — the standard lateral-CA / fringe clean-up.
+    """
+    if amount <= 0:
+        return img
+    s = amount / 100.0
+    L = luminance(img)
+    gx = cv2.Sobel(L, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(L, cv2.CV_32F, 0, 1, ksize=3)
+    edge = cv2.magnitude(gx, gy)
+    if edge.max() > EPS:
+        edge /= edge.max()
+    edge = _gaussian(edge, 1.0 * px_scale + 0.3)
+    mask = _smoothstep(0.08, 0.3, edge)[..., None]
+    Lc = L[..., None]
+    return np.clip(Lc + (img - Lc) * (1.0 - s * mask), 0.0, 1.0)
+
+
+@lru_cache(maxsize=8)
+def _distortion_maps(h: int, w: int, k_milli: int) -> tuple[np.ndarray, np.ndarray]:
+    """Cached remap tables for a radial distortion coefficient (k = k_milli/1000)."""
+    k = k_milli / 1000.0
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    cx, cy = (w - 1) / 2.0, (h - 1) / 2.0
+    norm = np.hypot(cx, cy)
+    nx = (xx - cx) / norm
+    ny = (yy - cy) / norm
+    r2 = nx * nx + ny * ny
+    factor = 1.0 + k * r2
+    map_x = (cx + nx * norm * factor).astype(np.float32)
+    map_y = (cy + ny * norm * factor).astype(np.float32)
+    return map_x, map_y
+
+
+def apply_distortion(img: np.ndarray, amount: float) -> np.ndarray:
+    """Radial lens-distortion correction. Negative corrects barrel, positive pincushion."""
+    if amount == 0:
+        return img
+    k_milli = int(round((amount / 100.0) * 300))  # ±0.3 max
+    h, w = img.shape[:2]
+    map_x, map_y = _distortion_maps(h, w, k_milli)
+    out = cv2.remap(np.ascontiguousarray(img), map_x, map_y,
+                    interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    return np.clip(out, 0.0, 1.0)
+
+
 def apply_grain(img: np.ndarray, amount: float, seed: int = 12345) -> np.ndarray:
     if amount <= 0:
         return img

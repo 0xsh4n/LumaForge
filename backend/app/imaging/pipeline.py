@@ -12,16 +12,25 @@ from __future__ import annotations
 import numpy as np
 
 from ..schemas import Adjustments
+from ..lut_store import lut_store
 from . import adjustments as adj
+from . import grading
+from . import portrait as portrait_mod
 from .color import luminance
 
 
-def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0) -> np.ndarray:
+def _lut_resolver(lut_id: str):
+    return lut_store.get(lut_id)
+
+
+def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0,
+           faces: list | None = None) -> np.ndarray:
     """Apply the full adjustment stack. ``original`` is float32 RGB [0,1].
 
     ``px_scale`` = (this render's long edge) / (original's long edge). It is
     <= 1 for previews so that pixel-defined operations match the full-size
-    export result.
+    export result. ``faces`` are normalized detections used by the portrait
+    stage (built into masks at this resolution).
     """
     img = np.array(original, dtype=np.float32, copy=True)
 
@@ -38,6 +47,14 @@ def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0) -> np.nd
     img = adj.apply_local_contrast(img, a.detail.texture, a.detail.clarity, a.detail.dehaze)
     # 5. Colour
     img = adj.apply_color(img, a.color.vibrance, a.color.saturation, a.color.hue)
+    # 5b. Colour grading (curves / HSL / colour balance / split tone / LUT)
+    img = grading.apply_grade(img, a.grade, lut_resolver=_lut_resolver)
+    # 5c. Portrait retouch (mask-driven, identity-preserving)
+    if a.portrait.enabled and faces:
+        from . import face as face_mod
+
+        masks = face_mod.build_masks(img, faces)
+        img = portrait_mod.apply_portrait(img, a.portrait, masks)
     # 6. Noise reduction (before sharpening)
     img = adj.apply_noise_reduction(img, a.detail.noise_reduction, px_scale)
     # 7. Sharpening
@@ -45,11 +62,29 @@ def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0) -> np.nd
         img, a.detail.sharpen_amount, a.detail.sharpen_radius,
         a.detail.sharpen_detail, a.detail.sharpen_masking, px_scale,
     )
-    # 8. Effects
+    # 8. Lens corrections + effects
+    img = adj.apply_defringe(img, a.effects.defringe, px_scale)
+    img = adj.apply_distortion(img, a.effects.distortion)
     img = adj.apply_vignette(img, a.effects.vignette)
     img = adj.apply_grain(img, a.effects.grain)
 
     return np.clip(img, 0.0, 1.0)
+
+
+def render_color_only(img: np.ndarray, a: Adjustments) -> np.ndarray:
+    """Apply only the per-pixel colour transform (no spatial ops).
+
+    Used to bake the current look into a 3D LUT: white balance + exposure, tone,
+    colour and the full grading stack — but not vignette, sharpening, local
+    contrast, noise or grain, which are not expressible as a colour LUT.
+    """
+    out = np.array(img, dtype=np.float32, copy=True)
+    out = adj.apply_wb_exposure(out, a.color.temperature, a.color.tint, a.light.exposure)
+    out = adj.apply_tone(out, a.light.contrast, a.light.highlights, a.light.shadows,
+                         a.light.whites, a.light.blacks)
+    out = adj.apply_color(out, a.color.vibrance, a.color.saturation, a.color.hue)
+    out = grading.apply_grade(out, a.grade, lut_resolver=_lut_resolver)
+    return np.clip(out, 0.0, 1.0)
 
 
 def analyze(original: np.ndarray, bins: int = 256) -> dict:

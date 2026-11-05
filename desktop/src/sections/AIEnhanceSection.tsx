@@ -3,12 +3,6 @@ import { IconWand, IconFace, IconSubject, IconSparkles, IconImport } from "../co
 
 const FEATURES = [
   {
-    icon: IconFace,
-    name: "AI Portrait Retouch",
-    phase: 3,
-    body: "Face-aware blemish reduction, skin-texture-preserving smoothing, eye and teeth refinement — identity and facial geometry always preserved.",
-  },
-  {
     icon: IconSubject,
     name: "DSLR Look",
     phase: 5,
@@ -27,6 +21,7 @@ export default function AIEnhanceSection() {
   const image = useEditor((s) => s.image);
   const importImage = useEditor((s) => s.importImage);
   const openAutoEnhance = useEditor((s) => s.openAutoEnhance);
+  const openPortrait = useEditor((s) => s.openPortrait);
 
   return (
     <div className="lf-scroll h-full overflow-y-auto">
@@ -102,6 +97,30 @@ export default function AIEnhanceSection() {
           >
             <IconWand width={16} height={16} />
             {image ? "Open Auto Enhance" : "Import a photo first"}
+          </button>
+        </section>
+
+        {/* Portrait Retouch — live */}
+        <section className="mt-4 lf-card relative overflow-hidden p-5">
+          <span className="absolute right-4 top-4 rounded bg-forge-500/20 px-2 py-0.5 text-[11px] font-medium text-forge-300">
+            Available
+          </span>
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-forge-500/15 text-forge-400">
+            <IconFace width={20} height={20} />
+          </div>
+          <div className="text-base font-medium text-mist-100">AI Portrait Retouch</div>
+          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-mist-500">
+            Face-aware, identity-preserving retouch: texture-preserving skin smoothing,
+            eye & teeth refinement, facial lighting and background control — across 10
+            Portrait Studio modes. No geometry change, no AI-generated faces.
+          </p>
+          <button
+            onClick={() => void openPortrait()}
+            disabled={!image}
+            className="lf-btn-primary mt-4 disabled:opacity-50"
+          >
+            <IconFace width={16} height={16} />
+            {image ? "Open Portrait Studio" : "Import a photo first"}
           </button>
         </section>
 

@@ -4,11 +4,14 @@ import type { SliderSpec } from "../lib/adjustments";
 import type { AdjustGroup } from "../types";
 import Slider from "../components/Slider";
 import Histogram from "../components/Histogram";
+import ColorStudioPanel from "./ColorStudioPanel";
+import RawDevelopPanel from "./RawDevelopPanel";
 import { useEditor } from "../store/editorStore";
 
 export default function AdjustPanel() {
   const analysis = useEditor((s) => s.analysis);
   const image = useEditor((s) => s.image);
+  const [tab, setTab] = useState<"basic" | "color">("basic");
   const [open, setOpen] = useState<Record<string, boolean>>({
     light: true,
     color: true,
@@ -18,6 +21,8 @@ export default function AdjustPanel() {
 
   return (
     <aside className="flex h-full w-[300px] shrink-0 flex-col border-l border-ink-600 bg-ink-800">
+      {/* RAW develop (only for RAW images) */}
+      <RawDevelopPanel />
       {/* histogram + readout */}
       <div className="border-b border-ink-600 p-3">
         <Histogram data={analysis?.histogram ?? null} />
@@ -36,7 +41,25 @@ export default function AdjustPanel() {
         )}
       </div>
 
-      <div className="lf-scroll flex-1 overflow-y-auto">
+      {/* Basic / Color tab switcher */}
+      <div className="flex gap-1 border-b border-ink-600 p-2">
+        {(["basic", "color"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-md py-1.5 text-xs font-medium capitalize transition-colors ${
+              tab === t ? "bg-ink-600 text-mist-100" : "text-mist-500 hover:bg-ink-700"
+            }`}
+          >
+            {t === "color" ? "Color Studio" : "Basic"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "color" ? (
+        <ColorStudioPanel />
+      ) : (
+        <div className="lf-scroll flex-1 overflow-y-auto">
         {EDITOR_GROUPS.map((g) => (
           <GroupPanel
             key={g.group}
@@ -46,9 +69,10 @@ export default function AdjustPanel() {
           >
             <GroupBody group={g.group} sliders={g.sliders} />
           </GroupPanel>
-        ))}
-        <div className="h-4" />
-      </div>
+          ))}
+          <div className="h-4" />
+        </div>
+      )}
     </aside>
   );
 }

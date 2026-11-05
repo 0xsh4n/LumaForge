@@ -63,6 +63,19 @@ export async function pickSavePath(
   return null;
 }
 
+/** Pick a single file matching an accept list (uses the webview file input,
+ *  which works in both Tauri and the browser). */
+export function pickFile(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = accept;
+    input.onchange = () => resolve(input.files?.[0] ?? null);
+    input.oncancel = () => resolve(null);
+    input.click();
+  });
+}
+
 /** Trigger a browser download of a blob (web export fallback). */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);

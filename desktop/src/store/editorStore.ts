@@ -5,17 +5,29 @@ import {
   isNeutral,
   lerpAdjustments,
   neutralAdjustments,
+  neutralGrade,
 } from "../lib/adjustments";
-import { pickImageToImport, pickSavePath, downloadBlob, isTauri } from "../lib/platform";
+import {
+  pickImageToImport,
+  pickSavePath,
+  pickFile,
+  downloadBlob,
+  isTauri,
+} from "../lib/platform";
 import type {
   Adjustments,
   AdjustGroup,
   AutoEnhanceResult,
   AutoMode,
   ExportFormat,
+  Grade,
   HardwareReport,
   ImageAnalysis,
   ImageMeta,
+  LutInfo,
+  PortraitAdjust,
+  PortraitMode,
+  RawParams,
 } from "../types";
 
 export type Section = "home" | "editor" | "ai" | "presets" | "settings";
@@ -42,6 +54,16 @@ interface AutoEnhanceState {
   error: string | null;
   notes: string[];
   scene: AutoEnhanceResult["scene"] | null;
+}
+
+interface PortraitState {
+  open: boolean;
+  modes: PortraitMode[];
+  mode: string;
+  detecting: boolean;
+  faceCount: number;
+  modelAvailable: boolean;
+  message: string | null;
 }
 
 interface EditorState {
@@ -72,6 +94,10 @@ interface EditorState {
   previewQuality: PreviewQuality;
 
   autoEnhance: AutoEnhanceState;
+  portrait: PortraitState;
+  luts: LutInfo[];
+  lutError: string | null;
+  developing: boolean; // RAW re-decode in progress
 
   // --- actions ---
   setSection: (s: Section) => void;
@@ -80,6 +106,7 @@ interface EditorState {
 
   importImage: () => Promise<void>;
   openPath: (path: string) => Promise<void>;
+  rawDevelop: (params: RawParams) => Promise<void>;
   closeImage: () => void;
 
   beginGesture: () => void;
@@ -93,6 +120,22 @@ interface EditorState {
   setAutoStrength: (strength: number) => void;
   applyAutoEnhance: () => void;
   cancelAutoEnhance: () => void;
+
+  // portrait studio (Phase 3)
+  openPortrait: () => Promise<void>;
+  setPortraitMode: (mode: string) => void;
+  setPortraitField: (field: keyof PortraitAdjust, value: number) => void;
+  applyPortrait: () => void;
+  cancelPortrait: () => void;
+
+  // color grading (Phase 2b)
+  setGradeLive: (grade: Grade) => void;
+  resetGrade: () => void;
+  loadLuts: () => Promise<void>;
+  importLut: () => Promise<void>;
+  selectLut: (id: string | null) => void;
+  deleteLut: (id: string) => Promise<void>;
+  exportLut: () => Promise<void>;
 
   undo: () => void;
   redo: () => void;
@@ -200,6 +243,15 @@ function loadMeta(
       notes: [],
       scene: null,
     },
+    portrait: {
+      open: false,
+      modes: get().portrait.modes, // keep loaded mode list
+      mode: "natural",
+      detecting: false,
+      faceCount: 0,
+      modelAvailable: get().portrait.modelAvailable,
+      message: null,
+    },
   });
   scheduleRender(get, set, 0);
   api.analyze(meta.id).then((a) => set({ analysis: a })).catch(() => {});
@@ -268,6 +320,18 @@ export const useEditor = create<EditorState>((set, get) => ({
     notes: [],
     scene: null,
   },
+  portrait: {
+    open: false,
+    modes: [],
+    mode: "natural",
+    detecting: false,
+    faceCount: 0,
+    modelAvailable: true,
+    message: null,
+  },
+  luts: [],
+  lutError: null,
+  developing: false,
 
   setSection: (s) => set({ section: s }),
 
@@ -277,6 +341,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       const h = await api.health();
       set({ backend: { status: "online", version: h.version } });
       void get().loadHardware();
+      void get().loadLuts();
     } catch (e) {
       set({
         backend: {
@@ -325,6 +390,28 @@ export const useEditor = create<EditorState>((set, get) => ({
       set({
         importing: false,
         importError: e instanceof ApiError ? e.message : "Import failed",
+      });
+    }
+  },
+
+  rawDevelop: async (params) => {
+    const { image } = get();
+    if (!image || !image.is_raw) return;
+    set({ developing: true, importError: null });
+    try {
+      const meta = await api.rawDevelop(image.id, params);
+      set({
+        image: meta,
+        // bust the cached original (same URL, new pixels after re-decode)
+        originalUrl: api.originalUrl(meta.id, 1920) + "&t=" + Date.now(),
+        developing: false,
+      });
+      scheduleRender(get, set, 0);
+      api.analyze(meta.id).then((a) => set({ analysis: a })).catch(() => {});
+    } catch (e) {
+      set({
+        developing: false,
+        importError: e instanceof ApiError ? e.message : "RAW develop failed",
       });
     }
   },
@@ -418,6 +505,148 @@ export const useEditor = create<EditorState>((set, get) => ({
   cancelAutoEnhance: () => {
     get().cancelGesture();
     set({ autoEnhance: { ...get().autoEnhance, open: false } });
+  },
+
+  openPortrait: async () => {
+    const { image } = get();
+    if (!image) return;
+    get().beginGesture(); // whole portrait session = one undo step
+    set({
+      section: "editor",
+      portrait: { ...get().portrait, open: true, detecting: true, message: null },
+    });
+    if (get().portrait.modes.length === 0) {
+      try {
+        const modes = await api.portraitModes();
+        set({ portrait: { ...get().portrait, modes } });
+      } catch {
+        /* non-fatal */
+      }
+    }
+    try {
+      const res = await api.detectFaces(image.id);
+      set({
+        portrait: {
+          ...get().portrait,
+          detecting: false,
+          faceCount: res.count,
+          modelAvailable: res.model_available,
+          message: res.message ?? (res.count === 0 ? "No faces detected in this photo." : null),
+        },
+      });
+      if (res.count > 0) get().setPortraitMode(get().portrait.mode || "natural");
+    } catch (e) {
+      set({
+        portrait: {
+          ...get().portrait,
+          detecting: false,
+          message: e instanceof ApiError ? e.message : "Face detection failed",
+        },
+      });
+    }
+  },
+
+  setPortraitMode: (mode) => {
+    const m = get().portrait.modes.find((x) => x.id === mode);
+    if (!m) return;
+    const next = cloneAdjustments(get().adjustments);
+    next.portrait = { ...m.params, enabled: true };
+    set({ adjustments: next, portrait: { ...get().portrait, mode } });
+    scheduleRender(get, set, 0);
+  },
+
+  setPortraitField: (field, value) => {
+    const next = cloneAdjustments(get().adjustments);
+    (next.portrait as unknown as Record<string, number | boolean>)[field] = value;
+    next.portrait.enabled = true;
+    set({ adjustments: next });
+    scheduleRender(get, set);
+  },
+
+  applyPortrait: () => {
+    get().endGesture();
+    set({ portrait: { ...get().portrait, open: false } });
+  },
+
+  cancelPortrait: () => {
+    get().cancelGesture();
+    set({ portrait: { ...get().portrait, open: false } });
+  },
+
+  setGradeLive: (grade) => {
+    set({ adjustments: { ...get().adjustments, grade } });
+    scheduleRender(get, set);
+  },
+
+  resetGrade: () => {
+    const next = cloneAdjustments(get().adjustments);
+    next.grade = neutralGrade();
+    get().applyAdjustments(next);
+  },
+
+  loadLuts: async () => {
+    try {
+      set({ luts: await api.listLuts() });
+    } catch {
+      /* non-fatal */
+    }
+  },
+
+  importLut: async () => {
+    set({ lutError: null });
+    try {
+      const file = await pickFile(".cube");
+      if (!file) return;
+      const info = await api.importLut(file);
+      await get().loadLuts();
+      get().selectLut(info.id);
+    } catch (e) {
+      set({ lutError: e instanceof ApiError ? e.message : "LUT import failed" });
+    }
+  },
+
+  selectLut: (id) => {
+    const next = cloneAdjustments(get().adjustments);
+    next.grade.lut_id = id;
+    get().applyAdjustments(next);
+  },
+
+  deleteLut: async (id) => {
+    try {
+      await api.removeLut(id);
+    } catch {
+      /* ignore */
+    }
+    if (get().adjustments.grade.lut_id === id) get().selectLut(null);
+    await get().loadLuts();
+  },
+
+  exportLut: async () => {
+    const { image, adjustments } = get();
+    if (!image) return;
+    set({ exportState: { state: "exporting" } });
+    try {
+      if (isTauri()) {
+        const path = await pickSavePath("lumaforge.cube", "cube");
+        if (!path) {
+          set({ exportState: { state: "idle" } });
+          return;
+        }
+        const res = await api.exportLutToPath(image.id, adjustments, path);
+        set({ exportState: { state: "done", message: `Saved LUT → ${res.path}` } });
+      } else {
+        const blob = await api.exportLutBytes(image.id, adjustments);
+        downloadBlob(blob, "lumaforge.cube");
+        set({ exportState: { state: "done", message: "Downloaded lumaforge.cube" } });
+      }
+    } catch (e) {
+      set({
+        exportState: {
+          state: "error",
+          message: e instanceof ApiError ? e.message : "LUT export failed",
+        },
+      });
+    }
   },
 
   undo: () => {

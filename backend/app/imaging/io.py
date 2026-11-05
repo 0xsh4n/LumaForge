@@ -111,19 +111,18 @@ def load_image(path: str | Path) -> tuple[np.ndarray, dict]:
     ext = p.suffix.lower()
 
     if ext in RAW_EXTS:
-        if not RAW_AVAILABLE:
+        from . import raw as rawdev
+
+        if not rawdev.RAW_AVAILABLE:
             raise UnsupportedImage(
                 "RAW support is not installed. Install the 'rawpy' package "
                 "(pip install rawpy) to open camera RAW files."
             )
-        import rawpy  # type: ignore
-
-        with rawpy.imread(str(p)) as raw:
-            rgb16 = raw.postprocess(
-                output_bps=16, no_auto_bright=False, use_camera_wb=True
-            )
-        img = to_float(rgb16.astype(np.uint16))
-        meta = {"format": "RAW", "bit_depth": 16, "exif": {}}
+        try:
+            img, meta = rawdev.develop_raw(p, None)
+        except rawdev.RawError as e:
+            raise UnsupportedImage(str(e))
+        return img, meta  # develop_raw returns complete metadata
     elif ext in HEIF_EXTS and not HEIF_AVAILABLE:
         raise UnsupportedImage(
             "HEIC/HEIF support is not installed on this platform "

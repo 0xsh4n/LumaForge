@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from .config import get_settings
-from .routers import enhance, images, process, projects, system
+from .routers import enhance, grade, images, portrait, process, projects, system
 
 
 def create_app() -> FastAPI:
@@ -41,6 +41,8 @@ def create_app() -> FastAPI:
     app.include_router(images.router)
     app.include_router(process.router)
     app.include_router(enhance.router)
+    app.include_router(grade.router)
+    app.include_router(portrait.router)
     app.include_router(projects.router)
 
     @app.get("/")

@@ -27,7 +27,7 @@ def _render_preview(session: ImageSession, req: RenderRequest) -> bytes:
     base, _ = imgio.downscale_to(base, max_dim)
     render_long = max(base.shape[:2])
     px_scale = render_long / float(session.original_long_edge)
-    out = pipeline.render(base, req.adjustments, px_scale=px_scale)
+    out = pipeline.render(base, req.adjustments, px_scale=px_scale, faces=session.faces)
     return imgio.encode_preview(out, req.format, req.quality)
 
 
@@ -48,7 +48,7 @@ def _export(session: ImageSession, req: ExportRequest) -> dict:
         px_scale = scale
     else:
         base, px_scale = original, 1.0
-    out = pipeline.render(base, req.adjustments, px_scale=px_scale)
+    out = pipeline.render(base, req.adjustments, px_scale=px_scale, faces=session.faces)
     return imgio.save_image(
         out, req.path, fmt=req.format, quality=req.quality,
         keep_metadata=req.keep_metadata,

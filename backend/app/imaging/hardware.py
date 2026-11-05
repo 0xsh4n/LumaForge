@@ -123,4 +123,10 @@ def live_report() -> dict:
     """Static report plus a fresh VRAM reading (not cached)."""
     rep = dict(static_report())
     rep["gpus"] = _query_nvidia_smi() or rep["gpus"]
+    try:
+        from . import face as facemod
+
+        rep["models"] = {"face_detection": facemod.model_available()}
+    except Exception:
+        rep["models"] = {"face_detection": False}
     return rep

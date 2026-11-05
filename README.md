@@ -10,19 +10,32 @@ It is a **native desktop application**: a compiled [Tauri 2](https://tauri.app)
 shell (Rust) that renders its UI in the OS webview (WebView2 on Windows) and
 launches a bundled Python image-processing engine as a local sidecar.
 
-> **Status — Phase 1 complete.** The core, non-destructive manual editing engine
-> is implemented and tested: universal import, real adjustment pipeline, live
-> preview, before/after comparison, and high-quality export. AI features
-> (Auto Enhance, Portrait, Masking, DSLR Look, upscaling, color grading and the
-> local AI assistant) are layered on in later phases — see
+> **Status — Phases 1, 2, 2b, 2c & 3 complete.** Implemented and tested:
+> the non-destructive manual editing engine, **AI Auto Enhance**, the
+> **Color Grading Studio** (curves/HSL/colour wheels/split-tone/`.cube` LUTs),
+> the **RAW/DNG development engine** (LibRaw), and the identity-preserving
+> **Portrait Studio** (face detection + 10 retouch modes). Masking, DSLR Look,
+> depth/motion, upscaling and the local AI assistant come next — see
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
-## What works today (Phase 1)
+## What works today
 
+- **AI Auto Enhance** — adaptive, per-image analysis produces an *editable*
+  enhancement profile (Natural / Professional / Cinematic + strength). Every value
+  lands in the sliders; non-destructive, one-undo-step.
+- **Color Grading Studio** — interactive tone curves (RGB + per-channel), 8-band
+  HSL, 3-way colour-balance wheels, split toning, and `.cube` LUT import + export
+  (bake your look to a LUT).
+- **RAW / DNG development** — a real LibRaw pipeline (demosaic, camera WB,
+  highlight handling, 16-bit) with live re-decode controls; the RAW file is never
+  modified.
+- **Portrait Studio** — YuNet face detection → skin/eye/teeth/hair masks →
+  identity-preserving retouch (texture-preserving smoothing, eye/teeth/hair work,
+  facial & background tone) across 10 editable modes. No geometry change.
 - **Universal import** — JPEG, PNG, WebP, BMP, TIFF, plus HEIC/HEIF and camera
-  RAW when their optional codecs are installed. Decoded to full-resolution float.
+  RAW (DNG/CR2/CR3/NEF/ARW/…). Decoded to full-resolution float.
 - **Manual editing engine** — real, parameter-driven adjustments:
   - *Light* — Exposure, Contrast, Highlights, Shadows, Whites, Blacks
   - *Color* — Temperature, Tint, Vibrance, Saturation, Hue

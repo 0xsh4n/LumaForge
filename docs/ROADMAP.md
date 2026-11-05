@@ -29,33 +29,48 @@ comparison, presets, settings/compatibility report, and high-quality export.
   summary of what it did. *(§4, §9)*
 - `POST /api/images/{id}/auto-enhance`; 11 dedicated tests.
 
-## Phase 2b — Color Grading Studio *(classical, no models)*  *(§22)*
+## ✅ Phase 2b — Color Grading Studio *(complete)*  *(§22)*
 
-- RGB + per-channel **curves**, **HSL** (8 color bands × H/S/L), **color wheels**
-  (shadows/midtones/highlights/global), **split toning**, **selective color**.
-- **LUT** import/export (`.cube`), film-emulation presets, grain & vignette in a
-  color-managed pipeline with live preview for every control.
+- RGB + per-channel **curves** (interactive editor), **HSL** (8 colour bands ×
+  H/S/L), 3-way **colour-balance wheels** (shadows/midtones/highlights/global),
+  **split toning**.
+- **`.cube` LUT** import, 3D/1D trilinear application with intensity, and **LUT
+  export** that bakes the current colour look (round-trip verified). Live preview
+  on every control; 11 dedicated tests.
+- Selective color is covered by the HSL mixer; film-emulation presets ship as
+  importable LUTs.
 
-## Phase 2c — RAW / DNG development engine *(classical; mandatory)*  *(§21)*
+## ✅ Phase 2c — RAW / DNG development engine *(complete)*  *(§21)*
 
 - Proper LibRaw (rawpy) pipeline: decode sensor data → demosaic → white balance →
-  camera color → exposure/highlight/shadow → noise reduction → lens corrections →
-  working color space — **not** embedded-JPEG extraction.
-- RAW controls (exposure, temp/tint, highlight/shadow recovery, black/white
-  levels, demosaic quality, CA & distortion correction, RAW NR, sharpening) in a
-  ≥16-bit / floating-point pipeline. Originals preserved; parameters saved in
-  `.lfp` projects. Camera/ICC profile handling. *(Depends on `rawpy`/LibRaw.)*
+  camera colour → exposure/highlight handling → noise reduction → 16-bit sRGB —
+  **not** embedded-JPEG extraction. Verified against a real Nikon NEF.
+- RAW develop controls: WB mode (camera/auto/daylight), RAW exposure (EV),
+  highlight mode (clip/blend/recover), demosaic algorithm (AHD/VNG/DCB/AAHD/LMMSE),
+  FBDD noise reduction — all re-decode live and replace the working original,
+  non-destructively (the RAW file is never touched).
+- General **lens corrections** in the pipeline: defringe (CA) and
+  barrel/pincushion distortion. Fine tonal/colour/black-white work uses the normal
+  sliders on top. Export to 16-bit TIFF / JPEG / PNG / WebP.
+- Remaining for a later pass: per-channel CA magnification tuning, lens-profile
+  database, embedded ICC round-trip for RAW.
 
-## Phase 3 — Portrait retouching & Portrait Studio *(models)*
+## ✅ Phase 3 — Portrait retouching & Portrait Studio *(complete)*
 
-- Face/landmark detection (**MediaPipe**), skin/eyes/lips/hair regions. *(§5, §18)*
-- Blemish reduction, texture-preserving skin smoothing, eye/teeth refinement,
-  face-specific exposure & sharpening, hair enhancement — identity and facial
-  geometry always preserved.
-- Face restoration (**GFPGAN / CodeFormer**).
-- **Portrait Studio** workspace with editable mode profiles (Natural,
-  Professional, Studio, Cinematic, Editorial, Beauty, Environmental, Corporate
-  Headshot, Outdoor, Night) + intensity & naturalness sliders.
+- Face detection via OpenCV **YuNet** (bundled, ~230 KB model auto-downloaded
+  once) → feathered region masks for skin, eyes, teeth, hair, face and
+  background (skin-colour segmentation refines skin). *(§5, §18)*
+- Classical, **identity-preserving** retouch within those masks: frequency-
+  separation skin smoothing with texture preservation, blemish reduction, eye
+  enhance/brighten, teeth whitening, under-eye lift, facial exposure, face
+  sharpening & noise reduction, hair enhancement, background exposure/saturation.
+  No geometry change, no generative face synthesis.
+- **Portrait Studio** with 10 editable mode profiles (Natural, Professional,
+  Studio, Cinematic, Editorial, Beauty, Environmental, Corporate Headshot,
+  Outdoor, Night) + intensity & naturalness. Verified on a real face photo;
+  7 dedicated tests.
+- Deferred to a later pass (optional, generative): face restoration
+  (GFPGAN/CodeFormer) and 468-point landmarks — gated behind model verification.
 
 ## Phase 4 — Masking engine *(models)*  *(§7)*
 

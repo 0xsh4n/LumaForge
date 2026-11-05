@@ -6,7 +6,14 @@ from fastapi.concurrency import run_in_threadpool
 
 from ..imaging import io as imgio
 from ..imaging import pipeline
-from ..schemas import ImageAnalysis, ImageMeta, ImportByPathRequest
+from ..imaging import raw as rawdev
+from ..schemas import (
+    ImageAnalysis,
+    ImageMeta,
+    ImportByPathRequest,
+    RawDevelopRequest,
+    RawParams,
+)
 from ..store import store
 
 router = APIRouter(prefix="/api/images", tags=["images"])
@@ -24,6 +31,8 @@ def _meta_response(meta: dict) -> ImageMeta:
         format=meta.get("format", "?"),
         megapixels=meta.get("megapixels", 0.0),
         exif=meta.get("exif", {}),
+        is_raw=meta.get("is_raw", False),
+        raw_params=meta.get("raw_params"),
     )
 
 
@@ -35,9 +44,33 @@ async def import_by_path(req: ImportByPathRequest) -> ImageMeta:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"Failed to open image: {e}")
-    exif_bytes = await run_in_threadpool(imgio.read_exif_bytes, req.path)
-    session = store.add(img, meta, exif_bytes=exif_bytes)
+    if meta.get("is_raw"):
+        raw_params = RawParams().model_dump()
+        meta["raw_params"] = raw_params
+        session = store.add(img, meta, raw_path=req.path, raw_params=raw_params)
+    else:
+        exif_bytes = await run_in_threadpool(imgio.read_exif_bytes, req.path)
+        session = store.add(img, meta, exif_bytes=exif_bytes)
     return _meta_response(session.meta)
+
+
+@router.post("/{image_id}/raw-develop", response_model=ImageMeta)
+async def raw_develop(image_id: str, req: RawDevelopRequest) -> ImageMeta:
+    """Re-decode a RAW image with new develop parameters (replaces the original)."""
+    session = store.get(image_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Image not found")
+    if not session.is_raw or not session.raw_path:
+        raise HTTPException(status_code=422, detail="Not a RAW image")
+    try:
+        img, _ = await run_in_threadpool(rawdev.develop_raw, session.raw_path, req.raw_params)
+    except rawdev.RawError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    params = req.raw_params.model_dump()
+    updated = store.redevelop(image_id, img, params)
+    assert updated is not None
+    updated.meta["raw_params"] = params
+    return _meta_response(updated.meta)
 
 
 @router.post("/import-upload", response_model=ImageMeta)

@@ -48,15 +48,129 @@ class DetailAdjust(BaseModel):
 class EffectsAdjust(BaseModel):
     vignette: float = Field(0.0, ge=-100, le=100)
     grain: float = Field(0.0, ge=0, le=100)
+    # Lens corrections (general; also surfaced in RAW develop)
+    defringe: float = Field(0.0, ge=0, le=100, description="chromatic-aberration fringe reduction")
+    distortion: float = Field(0.0, ge=-100, le=100, description="barrel(-)/pincushion(+) correction")
+
+
+class RawParams(BaseModel):
+    """Decode-time RAW develop parameters (applied by LibRaw/rawpy).
+
+    Changing these re-decodes the sensor data; fine tonal/colour work is then
+    done with the normal adjustment sliders on top.
+    """
+
+    wb_mode: Literal["camera", "auto", "daylight"] = "camera"
+    exposure: float = Field(0.0, ge=-2.0, le=3.0, description="EV at the RAW stage")
+    highlight_mode: int = Field(0, ge=0, le=5, description="0 clip · 1 ignore · 2 blend · 3-5 reconstruct")
+    demosaic: Literal["AHD", "VNG", "DCB", "AAHD", "LMMSE", "DHT", "LINEAR"] = "AHD"
+    noise_reduction: int = Field(0, ge=0, le=2, description="FBDD: 0 off · 1 light · 2 full")
+
+
+# --------------------------- Color grading (Phase 2b) ----------------------
+
+def _linear_curve() -> list[list[float]]:
+    return [[0.0, 0.0], [1.0, 1.0]]
+
+
+class CurvesAdjust(BaseModel):
+    """Tone curves as control points (x,y) in [0,1]; default is linear (identity)."""
+
+    rgb: list[list[float]] = Field(default_factory=_linear_curve)
+    red: list[list[float]] = Field(default_factory=_linear_curve)
+    green: list[list[float]] = Field(default_factory=_linear_curve)
+    blue: list[list[float]] = Field(default_factory=_linear_curve)
+
+
+class HSLBand(BaseModel):
+    hue: float = Field(0.0, ge=-100, le=100)
+    saturation: float = Field(0.0, ge=-100, le=100)
+    luminance: float = Field(0.0, ge=-100, le=100)
+
+
+class HSLAdjust(BaseModel):
+    red: HSLBand = Field(default_factory=HSLBand)
+    orange: HSLBand = Field(default_factory=HSLBand)
+    yellow: HSLBand = Field(default_factory=HSLBand)
+    green: HSLBand = Field(default_factory=HSLBand)
+    aqua: HSLBand = Field(default_factory=HSLBand)
+    blue: HSLBand = Field(default_factory=HSLBand)
+    purple: HSLBand = Field(default_factory=HSLBand)
+    magenta: HSLBand = Field(default_factory=HSLBand)
+
+
+class ColorWheel(BaseModel):
+    """A 3-way color-balance zone: RGB push + luminance offset, all -100..100."""
+
+    r: float = Field(0.0, ge=-100, le=100)
+    g: float = Field(0.0, ge=-100, le=100)
+    b: float = Field(0.0, ge=-100, le=100)
+    luminance: float = Field(0.0, ge=-100, le=100)
+
+
+class ColorBalance(BaseModel):
+    shadows: ColorWheel = Field(default_factory=ColorWheel)
+    midtones: ColorWheel = Field(default_factory=ColorWheel)
+    highlights: ColorWheel = Field(default_factory=ColorWheel)
+    globe: ColorWheel = Field(default_factory=ColorWheel)  # "global" (reserved word)
+
+
+class SplitTone(BaseModel):
+    shadow_hue: float = Field(0.0, ge=0, le=360)
+    shadow_sat: float = Field(0.0, ge=0, le=100)
+    highlight_hue: float = Field(0.0, ge=0, le=360)
+    highlight_sat: float = Field(0.0, ge=0, le=100)
+    balance: float = Field(0.0, ge=-100, le=100)
+
+
+class Grade(BaseModel):
+    """Professional color-grading stack (Color Studio). All-neutral by default."""
+
+    curves: CurvesAdjust = Field(default_factory=CurvesAdjust)
+    hsl: HSLAdjust = Field(default_factory=HSLAdjust)
+    color_balance: ColorBalance = Field(default_factory=ColorBalance)
+    split_tone: SplitTone = Field(default_factory=SplitTone)
+    lut_id: Optional[str] = None
+    lut_intensity: float = Field(100.0, ge=0, le=100)
+
+
+# --------------------------- Portrait (Phase 3) ----------------------------
+
+
+class PortraitAdjust(BaseModel):
+    """Face-aware retouch parameters (Portrait Studio).
+
+    Applied only within detected face-region masks; geometry is never altered,
+    so the subject's identity is preserved. Disabled by default.
+    """
+
+    enabled: bool = False
+    skin_smoothing: float = Field(0.0, ge=0, le=100)
+    texture_preservation: float = Field(55.0, ge=0, le=100)
+    blemish_removal: float = Field(0.0, ge=0, le=100)
+    eye_enhance: float = Field(0.0, ge=0, le=100)
+    eye_brightness: float = Field(0.0, ge=0, le=100)
+    teeth_whiten: float = Field(0.0, ge=0, le=100)
+    face_exposure: float = Field(0.0, ge=-100, le=100)
+    face_sharpen: float = Field(0.0, ge=0, le=100)
+    hair_enhance: float = Field(0.0, ge=0, le=100)
+    under_eye: float = Field(0.0, ge=0, le=100)
+    face_noise_reduction: float = Field(0.0, ge=0, le=100)
+    background_exposure: float = Field(0.0, ge=-100, le=100)
+    background_saturation: float = Field(0.0, ge=-100, le=100)
+    intensity: float = Field(100.0, ge=0, le=100)
+    naturalness: float = Field(70.0, ge=0, le=100)
 
 
 class Adjustments(BaseModel):
-    """Complete non-destructive edit description for Phase 1."""
+    """Complete non-destructive edit description."""
 
     light: LightAdjust = Field(default_factory=LightAdjust)
     color: ColorAdjust = Field(default_factory=ColorAdjust)
     detail: DetailAdjust = Field(default_factory=DetailAdjust)
     effects: EffectsAdjust = Field(default_factory=EffectsAdjust)
+    grade: Grade = Field(default_factory=Grade)
+    portrait: PortraitAdjust = Field(default_factory=PortraitAdjust)
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +180,10 @@ class Adjustments(BaseModel):
 
 class ImportByPathRequest(BaseModel):
     path: str
+
+
+class RawDevelopRequest(BaseModel):
+    raw_params: RawParams = Field(default_factory=RawParams)
 
 
 class ImageMeta(BaseModel):
@@ -79,6 +197,8 @@ class ImageMeta(BaseModel):
     format: str
     megapixels: float
     exif: dict = Field(default_factory=dict)
+    is_raw: bool = False
+    raw_params: Optional[RawParams] = None
 
 
 class RenderRequest(BaseModel):

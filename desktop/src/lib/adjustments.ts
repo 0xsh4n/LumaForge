@@ -1,4 +1,44 @@
-import type { Adjustments, AdjustGroup } from "../types";
+import type { Adjustments, AdjustGroup, Grade, HSLBandName, PortraitAdjust } from "../types";
+
+export const HSL_BANDS: HSLBandName[] = [
+  "red", "orange", "yellow", "green", "aqua", "blue", "purple", "magenta",
+];
+
+const linear = (): [number, number][] => [
+  [0, 0],
+  [1, 1],
+];
+
+export function neutralGrade(): Grade {
+  const band = () => ({ hue: 0, saturation: 0, luminance: 0 });
+  const wheel = () => ({ r: 0, g: 0, b: 0, luminance: 0 });
+  return {
+    curves: { rgb: linear(), red: linear(), green: linear(), blue: linear() },
+    hsl: {
+      red: band(), orange: band(), yellow: band(), green: band(),
+      aqua: band(), blue: band(), purple: band(), magenta: band(),
+    },
+    color_balance: {
+      shadows: wheel(), midtones: wheel(), highlights: wheel(), globe: wheel(),
+    },
+    split_tone: {
+      shadow_hue: 0, shadow_sat: 0, highlight_hue: 0, highlight_sat: 0, balance: 0,
+    },
+    lut_id: null,
+    lut_intensity: 100,
+  };
+}
+
+export function neutralPortrait(): PortraitAdjust {
+  return {
+    enabled: false,
+    skin_smoothing: 0, texture_preservation: 55, blemish_removal: 0,
+    eye_enhance: 0, eye_brightness: 0, teeth_whiten: 0,
+    face_exposure: 0, face_sharpen: 0, hair_enhance: 0, under_eye: 0,
+    face_noise_reduction: 0, background_exposure: 0, background_saturation: 0,
+    intensity: 100, naturalness: 70,
+  };
+}
 
 export function neutralAdjustments(): Adjustments {
   return {
@@ -14,17 +54,15 @@ export function neutralAdjustments(): Adjustments {
       dehaze: 0,
       noise_reduction: 0,
     },
-    effects: { vignette: 0, grain: 0 },
+    effects: { vignette: 0, grain: 0, defringe: 0, distortion: 0 },
+    grade: neutralGrade(),
+    portrait: neutralPortrait(),
   };
 }
 
 export function cloneAdjustments(a: Adjustments): Adjustments {
-  return {
-    light: { ...a.light },
-    color: { ...a.color },
-    detail: { ...a.detail },
-    effects: { ...a.effects },
-  };
+  // Structured deep clone keeps the nested grade (curves arrays, wheels) safe.
+  return JSON.parse(JSON.stringify(a)) as Adjustments;
 }
 
 export function isNeutral(a: Adjustments): boolean {
@@ -32,10 +70,12 @@ export function isNeutral(a: Adjustments): boolean {
   return JSON.stringify(a) === JSON.stringify(n);
 }
 
-/** Linear interpolation between two adjustment sets (used by the strength slider). */
+/** Linear interpolation of the scalar groups (used by the Auto Enhance strength
+ *  slider). The nested `grade` stack is not interpolated — Auto Enhance never
+ *  sets it — so `out.grade` keeps `b`'s grade. */
 export function lerpAdjustments(a: Adjustments, b: Adjustments, t: number): Adjustments {
   const out = neutralAdjustments();
-  (Object.keys(out) as (keyof Adjustments)[]).forEach((group) => {
+  (["light", "color", "detail", "effects"] as AdjustGroup[]).forEach((group) => {
     const ga = a[group] as unknown as Record<string, number>;
     const gb = b[group] as unknown as Record<string, number>;
     const go = out[group] as unknown as Record<string, number>;
@@ -43,6 +83,8 @@ export function lerpAdjustments(a: Adjustments, b: Adjustments, t: number): Adju
       go[k] = +(ga[k] + (gb[k] - ga[k]) * t).toFixed(2);
     });
   });
+  out.grade = JSON.parse(JSON.stringify(b.grade));
+  out.portrait = JSON.parse(JSON.stringify(b.portrait));
   return out;
 }
 
@@ -107,8 +149,10 @@ export const EDITOR_GROUPS: GroupSpec[] = [
     group: "effects",
     title: "Effects",
     sliders: [
-      { key: "vignette", label: "Vignette", min: -100, max: 100, step: 1, default: 0, bipolar: true },
-      { key: "grain", label: "Grain", min: 0, max: 100, step: 1, default: 0 },
+      { key: "vignette", label: "Vignette", min: -100, max: 100, step: 1, default: 0, bipolar: true, sub: "Effects" },
+      { key: "grain", label: "Grain", min: 0, max: 100, step: 1, default: 0, sub: "Effects" },
+      { key: "defringe", label: "Defringe (CA)", min: 0, max: 100, step: 1, default: 0, sub: "Lens Corrections" },
+      { key: "distortion", label: "Distortion", min: -100, max: 100, step: 1, default: 0, bipolar: true, sub: "Lens Corrections" },
     ],
   },
 ];
