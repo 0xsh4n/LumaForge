@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the full LumaForge desktop app (Linux / macOS):
+# Build the full Lumetta desktop app (Linux / macOS):
 #   1. freeze the Python backend into the sidecar
 #   2. build the frontend + native Tauri bundle (installer / package)
 set -euo pipefail

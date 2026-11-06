@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core permissions for the LumaForge main window.",
+  "description": "Core permissions for the Lumetta main window.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -13,7 +13,7 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "binaries/lumaforge-backend",
+          "name": "binaries/lumetta-backend",
           "sidecar": true,
           "args": true
         }

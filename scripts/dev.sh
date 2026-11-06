@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start LumaForge in development.
+# Start Lumetta in development.
 #
 #   ./scripts/dev.sh            backend + Vite dev server (opens in a browser at
 #                               http://127.0.0.1:1420 — works on any OS)

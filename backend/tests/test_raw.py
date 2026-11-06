@@ -1,7 +1,7 @@
 """Tests for lens corrections and the RAW develop pipeline (Phase 2c).
 
 The RAW decode test runs only when a sample RAW file is available (its path in
-the LUMAFORGE_TEST_RAW environment variable), since RAW files are too large to
+the LUMETTA_TEST_RAW environment variable), since RAW files are too large to
 commit. The lens-correction tests always run on synthetic images.
 """
 from __future__ import annotations
@@ -51,11 +51,11 @@ def test_lens_corrections_in_pipeline():
 
 # ----------------------------- RAW decode --------------------------------
 
-RAW_SAMPLE = os.environ.get("LUMAFORGE_TEST_RAW")
+RAW_SAMPLE = os.environ.get("LUMETTA_TEST_RAW")
 
 
 @pytest.mark.skipif(not RAW_SAMPLE or not os.path.exists(RAW_SAMPLE),
-                    reason="no sample RAW file (set LUMAFORGE_TEST_RAW)")
+                    reason="no sample RAW file (set LUMETTA_TEST_RAW)")
 def test_develop_raw_variants():
     from app.imaging import raw as rawdev
     from app.schemas import RawParams

@@ -319,9 +319,48 @@ export interface ExportResult {
   format: string;
 }
 
+export interface ProjectFile {
+  schema_version: number;
+  app_version: string;
+  name: string;
+  source_path: string | null;
+  original_width: number;
+  original_height: number;
+  adjustments: Adjustments;
+  created_at: string;
+  modified_at: string;
+}
+
+export interface RecentProject {
+  path: string;
+  name: string;
+  opened_at: string;
+}
+
 export type ExportFormat = "jpeg" | "png" | "webp" | "tiff";
 
 export type AutoMode = "natural" | "professional" | "cinematic";
+
+export interface ColorMatchCard {
+  id: string;
+  title: string;
+  description: string;
+  accent: string;
+  adjustments: Adjustments;
+}
+
+export interface ColorMatchScene {
+  brightness: string;
+  cast: string;
+  saturation: string;
+  skin: boolean;
+  mood: string;
+}
+
+export interface ColorMatchResult {
+  scene: ColorMatchScene;
+  cards: ColorMatchCard[];
+}
 
 export interface AutoEnhanceResult {
   adjustments: Adjustments;

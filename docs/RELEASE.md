@@ -1,6 +1,6 @@
-# Releasing LumaForge
+# Releasing Lumetta
 
-LumaForge ships as native installers per platform. Because a Windows `.msi` can
+Lumetta ships as native installers per platform. Because a Windows `.msi` can
 only be produced on Windows (and a `.dmg` on macOS), releases are built by CI,
 with one build job per operating system.
 
@@ -45,10 +45,10 @@ On the target OS:
 Outputs land in `desktop/src-tauri/target/release/bundle/`.
 
 The sidecar step alone (useful to validate packaging) is
-`scripts/build_sidecar.*`; the resulting `lumaforge-backend[-<triple>]` is a
+`scripts/build_sidecar.*`; the resulting `lumetta-backend[-<triple>]` is a
 self-contained executable you can run directly:
 ```bash
-./backend/dist/lumaforge-backend --port 8756
+./backend/dist/lumetta-backend --port 8756
 curl http://127.0.0.1:8756/api/system/health
 ```
 

@@ -1,4 +1,4 @@
-# LumaForge backend — core runtime (Phase 1).
+# Lumetta backend — core runtime (Phase 1).
 # These are the only dependencies required for the application to run and for
 # all manual / classical image-processing features to work. Heavy AI model
 # dependencies live in requirements-ai.txt and are installed on demand for

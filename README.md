@@ -1,170 +1,122 @@
-# LumaForge
+<div align="center">
 
-**AI-powered photo enhancement & DSLR conversion studio — local, offline, cross-platform.**
+<img src="docs/logo.svg" alt="Lumetta" width="300" />
 
-LumaForge turns ordinary smartphone photographs into professionally processed,
-DSLR-style images using local AI models and classical image processing. It runs
-entirely on your machine after installation — no cloud services, no subscriptions.
+### AI photo enhancement & DSLR conversion studio — local, offline, cross-platform
 
-It is a **native desktop application**: a compiled [Tauri 2](https://tauri.app)
-shell (Rust) that renders its UI in the OS webview (WebView2 on Windows) and
-launches a bundled Python image-processing engine as a local sidecar.
+Turn ordinary photographs into professionally processed, DSLR-style images using
+local AI and classical image processing. Everything runs on your own machine —
+no cloud, no accounts, no subscriptions.
 
-> **Status — Phases 1, 2, 2b, 2c & 3 complete.** Implemented and tested:
-> the non-destructive manual editing engine, **AI Auto Enhance**, the
-> **Color Grading Studio** (curves/HSL/colour wheels/split-tone/`.cube` LUTs),
-> the **RAW/DNG development engine** (LibRaw), and the identity-preserving
-> **Portrait Studio** (face detection + 10 retouch modes). Masking, DSLR Look,
-> depth/motion, upscaling and the local AI assistant come next — see
-> [docs/ROADMAP.md](docs/ROADMAP.md).
+[User Guide](docs/USER_GUIDE.md) · [Developer Guide](docs/DEV_GUIDE.md) ·
+[AI Models](docs/MODELS.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
+
+</div>
 
 ---
 
-## What works today
+## Why Lumetta
 
-- **AI Auto Enhance** — adaptive, per-image analysis produces an *editable*
-  enhancement profile (Natural / Professional / Cinematic + strength). Every value
-  lands in the sliders; non-destructive, one-undo-step.
-- **Color Grading Studio** — interactive tone curves (RGB + per-channel), 8-band
-  HSL, 3-way colour-balance wheels, split toning, and `.cube` LUT import + export
-  (bake your look to a LUT).
-- **RAW / DNG development** — a real LibRaw pipeline (demosaic, camera WB,
-  highlight handling, 16-bit) with live re-decode controls; the RAW file is never
-  modified.
-- **Portrait Studio** — YuNet face detection → skin/eye/teeth/hair masks →
-  identity-preserving retouch (texture-preserving smoothing, eye/teeth/hair work,
-  facial & background tone) across 10 editable modes. No geometry change.
-- **Universal import** — JPEG, PNG, WebP, BMP, TIFF, plus HEIC/HEIF and camera
-  RAW (DNG/CR2/CR3/NEF/ARW/…). Decoded to full-resolution float.
-- **Manual editing engine** — real, parameter-driven adjustments:
-  - *Light* — Exposure, Contrast, Highlights, Shadows, Whites, Blacks
-  - *Color* — Temperature, Tint, Vibrance, Saturation, Hue
-  - *Detail* — Sharpening (amount/radius/detail/masking), Texture, Clarity, Dehaze, Noise reduction
-  - *Effects* — Vignette, Grain
-- **Non-destructive pipeline** — the original is never modified; every edit is a
-  parameter re-applied on demand. Preview-resolution rendering keeps sliders
-  responsive; export always uses full resolution.
-- **Live preview** with zoom/pan, hold-to-see-original, split and side-by-side
-  comparison, undo/redo history, per-slider and global reset.
-- **Image analysis** — histogram, clipping, exposure, color-cast and sharpness
-  (the foundation the AI Auto Enhance will build on).
-- **High-quality export** — JPEG, PNG, WebP and 16-bit TIFF, with quality,
-  optional resize, sRGB profile embedding and metadata preservation.
-- **Presets** — transparent, fully-editable starter looks.
-- **Settings** — real hardware/GPU compatibility report, preview-quality control.
+- **Fully local & private.** After install, every pixel is processed on your
+  machine. Your photos never leave your computer.
+- **Non-destructive, always.** Your original is never modified. Each edit is a
+  parameter re-applied on demand, so you can change or undo anything, anytime.
+- **Natural results.** The engine favours realistic output over exaggerated AI —
+  no plastic skin, fake HDR, or oversharpening.
+- **Honest about hardware.** Lumetta never silently falls back to the CPU; the
+  compatibility report tells you exactly what runs where.
+- **No subscriptions.** It's a native desktop app, not a web service.
 
-See screenshots and the full feature spec in [docs/](docs/).
+## What's inside
 
-## Architecture at a glance
+| | |
+|---|---|
+| **AI Auto Enhance** | One click reads the scene and balances exposure, white balance, contrast and dynamic range into an editable profile (Natural / Professional / Cinematic). |
+| **AI Color Match** | Analyses colour, light and mood, then proposes adjustable cinematic grading looks with skin tones protected. |
+| **Portrait Studio** | Identity-preserving retouch — skin, eyes, teeth, hair and lighting — inside face-aware masks across 10 modes. No geometry change, no generated faces. |
+| **Color Grading** | Interactive tone curves (RGB + per-channel), 8-band HSL, 3-way colour-balance wheels, split toning, and `.cube` LUT import & export. |
+| **RAW development** | A real LibRaw pipeline — demosaic, camera white balance, highlight handling, 16-bit — with live re-decode controls. The RAW file is never touched. |
+| **Masks & local edits** | Linear, radial and brush masks with their own adjustments (tone, colour, clarity, selective blur), feather, invert, opacity and stacked layers. |
+| **Motion blur** | Directional, zoom and spin motion effects, applied non-destructively. |
+| **Precision editing** | Light, colour, detail and effects — real, parameter-driven controls with live preview. |
+| **Universal import & export** | Open JPEG, PNG, WebP, BMP, TIFF, HEIC/HEIF and camera RAW; export full-resolution JPEG, PNG, WebP or 16-bit TIFF with sRGB profile and metadata. |
+| **Projects** | Save your work as a tiny `.lfp` file (a reference to the original plus your edits) and reopen it anytime. |
+
+> **Coming soon:** AI subject & sky masks, depth-based bokeh, AI upscaling &
+> restoration, and the optional on-device **Lumetta Assistant**. These use
+> optional models you add in **Settings → AI models**. See the [Roadmap](docs/ROADMAP.md).
+
+## How it works
+
+Lumetta is a native desktop application: a compiled [Tauri 2](https://tauri.app)
+shell (Rust) renders the UI in the OS webview and launches a bundled Python
+image-processing engine as a local sidecar. All image math lives in the Python
+backend; AI produces **parameters, masks and maps** that a single deterministic
+pipeline renders — never pixels directly.
 
 ```
-┌─────────────────────────────────────────────┐
-│  LumaForge.exe   (Tauri 2 / Rust native shell)│
-│  ┌─────────────────────────────────────────┐ │
-│  │ WebView2 UI  — React + TypeScript        │ │   UI thread
-│  │ Tailwind · Zustand                       │ │
-│  └───────────────────┬─────────────────────┘ │
-│                      │ HTTP (127.0.0.1:8756)  │
-│  ┌───────────────────▼─────────────────────┐ │
-│  │ lumaforge-backend  (bundled sidecar .exe)│ │   processing
-│  │ FastAPI · NumPy · OpenCV · Pillow        │ │   (CPU; GPU for
-│  │ (+ PyTorch / ONNX Runtime in later phases)│ │    AI, later)
-│  └─────────────────────────────────────────┘ │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│  Lumetta        (Tauri 2 / Rust native shell)      │
+│  ┌──────────────────────────────────────────────┐ │
+│  │ Webview UI — React + TypeScript · Tailwind    │ │  UI
+│  └──────────────────────┬───────────────────────┘ │
+│                         │ HTTP · 127.0.0.1         │
+│  ┌──────────────────────▼───────────────────────┐ │
+│  │ lumetta-backend  (bundled Python sidecar)     │ │  processing
+│  │ FastAPI · NumPy · OpenCV · LibRaw · Pillow     │ │  (CPU; GPU for
+│  │ (+ ONNX Runtime for optional AI models)        │ │   optional AI)
+│  └──────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────┘
 ```
 
-Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+More detail in the [Architecture](docs/ARCHITECTURE.md) and [Developer Guide](docs/DEV_GUIDE.md).
 
-## Tech stack
+## Install
 
-| Layer      | Technology |
-|------------|-----------|
-| Shell      | Tauri 2 (Rust), WebView2/WebKit |
-| Frontend   | React 18, TypeScript, Tailwind CSS, Zustand |
-| Backend    | Python, FastAPI, NumPy, OpenCV, Pillow |
-| AI (later) | PyTorch, ONNX Runtime, Real-ESRGAN, GFPGAN/CodeFormer, BiRefNet, MediaPipe, Depth Anything V2 |
+Download the installer for your platform from the Releases page and launch it —
+everything needed, including the processing engine, is bundled. See the
+[User Guide](docs/USER_GUIDE.md) to get started, or [INSTALL.md](docs/INSTALL.md)
+for building from source.
 
-## Quick start (development)
+## Quick start (from source)
 
 Prerequisites: **Node 18+**, **Python 3.10–3.14**, **Rust** (for the native
 shell), and the platform webview (WebView2 is preinstalled on Windows 10/11).
 
 ```bash
-# 1. install everything (venv + backend deps + frontend deps)
-./scripts/setup.sh            # Windows:  .\scripts\setup.ps1
-
-# 2. run it
+./scripts/setup.sh            # Windows:  .\scripts\setup.ps1   — venv + deps + npm install
 ./scripts/dev.sh              # backend + browser UI at http://127.0.0.1:1420
-./scripts/dev.sh --native     # backend + the native Tauri window
-#   Windows:  .\scripts\dev.ps1            (native window)
-#             .\scripts\dev.ps1 -Browser   (browser UI)
+./scripts/dev.sh --native     # backend + the native window
 ```
 
-## Build the installable app
+Build installers (on the OS you're targeting):
 
 ```bash
 ./scripts/build.sh            # Windows:  .\scripts\build.ps1
 ```
 
-This freezes the Python backend into a sidecar executable and builds the native
-bundle. On **Windows** you get an `.msi` and an NSIS `.exe` installer under
-`desktop/src-tauri/target/release/bundle/`. On Linux you get `.deb`/AppImage; on
-macOS a `.dmg`. Full instructions, including optional RAW/HEIC codecs and GPU
-setup, are in [docs/INSTALL.md](docs/INSTALL.md).
+Full build, codec and packaging details are in the [Developer Guide](docs/DEV_GUIDE.md)
+and [INSTALL.md](docs/INSTALL.md).
 
 ## AI models (optional)
 
-Manual editing, Auto Enhance, color grading and RAW development are classical
-and need no downloads. The AI features in phases 4–7 (masking, depth & bokeh,
-upscaling, face restoration, the optional Luma Assistant) use optional models
-pulled on demand from their **official sources** — manage them in-app under
-**Settings → AI models**.
+Manual editing, Auto Enhance, Color Match, color grading and RAW development are
+all classical and need no downloads. The optional AI features use models pulled
+on demand from their **official sources** and managed in **Settings → AI models**.
+They are stored in your per-user data directory — never in the repo. The full
+catalog, safe download links and storage locations are in [MODELS.md](docs/MODELS.md).
 
-They are stored in the per-user data directory (not the repo):
-`%APPDATA%\LumaForge\models\` (Windows), `~/Library/Application Support/LumaForge/models/`
-(macOS), or `~/.local/share/LumaForge/models/` (Linux). The full download-link
-table and manual-install instructions are in **[docs/MODELS.md](docs/MODELS.md)**.
+## Documentation
 
-## Testing
-
-```bash
-cd backend && ../.venv/bin/python -m pytest      # image-engine + API tests
-cd desktop && npm run build                       # typecheck + frontend build
-```
-
-## Repository layout
-
-```
-LumaForge/
-├── backend/            Python processing engine (FastAPI + image pipeline)
-│   ├── app/
-│   │   ├── imaging/    io · color · adjustments · pipeline · hardware
-│   │   ├── routers/    system · images · process · projects · models
-│   │   ├── models_registry.py   trusted AI-model catalog (sources + sizes)
-│   │   ├── store.py    in-memory non-destructive image sessions
-│   │   └── main.py     FastAPI app + sidecar entry
-│   ├── tests/
-│   └── lumaforge-backend.spec   PyInstaller sidecar spec
-├── desktop/            Tauri + React app
-│   ├── src/            React UI (sections, editor, components, store, lib)
-│   └── src-tauri/      Rust shell, tauri.conf.json, icons, capabilities
-├── scripts/            setup · dev · build · build_sidecar  (.sh + .ps1)
-├── docs/               ARCHITECTURE · INSTALL · GPU · MODELS · ROADMAP
-└── models/             dev placeholder — real models live in the user data dir
-```
-
-> AI models are **not** stored in the repo; they download to the per-user data
-> directory (see [docs/MODELS.md](docs/MODELS.md)). The `models/` folder here is a
-> development placeholder only.
-
-## Principles
-
-- **Natural results over exaggerated AI effects.** No fake HDR, oversharpening,
-  plastic skin or unrealistic colors.
-- **Non-destructive, always.** Originals are never overwritten.
-- **Offline & private.** Everything runs locally once installed.
-- **Honest about hardware.** The app never silently falls back to CPU — the
-  compatibility report in Settings tells you exactly what is running where.
+| Doc | For |
+|-----|-----|
+| [User Guide](docs/USER_GUIDE.md) | Using every feature of the app |
+| [Developer Guide](docs/DEV_GUIDE.md) | Architecture, setup, testing, building, contributing |
+| [AI Models](docs/MODELS.md) | Optional models, safe sources, where they're stored |
+| [Architecture](docs/ARCHITECTURE.md) | How the shell, engine and pipeline fit together |
+| [GPU & hardware](docs/GPU.md) | Compatibility, acceleration, VRAM |
+| [Release & signing](docs/RELEASE.md) | CI builds, installers, code signing |
+| [Roadmap](docs/ROADMAP.md) | What's available now and what's next |
 
 ## License
 

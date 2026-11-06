@@ -3,6 +3,7 @@ import {
   IconImport,
   IconWand,
   IconFace,
+  IconSparkles,
   IconSubject,
   IconLayers,
   IconSky,
@@ -32,13 +33,13 @@ function UpcomingTool({ tool }: { tool: Tool }) {
   return (
     <button
       disabled
-      title={`${tool.label} — arriving in Phase ${tool.phase}`}
+      title={`${tool.label} — coming soon`}
       className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] text-mist-500 opacity-70"
     >
       <Icon width={18} height={18} className="shrink-0" />
       <span className="flex-1 truncate">{tool.label}</span>
       <span className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-medium text-mist-500">
-        P{tool.phase}
+        Soon
       </span>
     </button>
   );
@@ -53,6 +54,8 @@ export default function LeftToolbar() {
   const autoOpen = useEditor((s) => s.autoEnhance.open);
   const openPortrait = useEditor((s) => s.openPortrait);
   const portraitOpen = useEditor((s) => s.portrait.open);
+  const openColorMatch = useEditor((s) => s.openColorMatch);
+  const colorMatchOpen = useEditor((s) => s.colorMatch.open);
   const addMask = useEditor((s) => s.addMask);
   const openMaskPanel = useEditor((s) => s.openMaskPanel);
   const maskPanelOpen = useEditor((s) => s.maskPanel.open);
@@ -100,6 +103,19 @@ export default function LeftToolbar() {
           >
             <IconFace width={18} height={18} className="shrink-0" />
             <span className="flex-1 truncate">AI Portrait Retouch</span>
+            <span className="rounded bg-forge-500/20 px-1.5 py-0.5 text-[10px] font-medium text-forge-300">
+              New
+            </span>
+          </button>
+          <button
+            onClick={() => void openColorMatch()}
+            disabled={!hasImage}
+            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition-colors disabled:opacity-40 ${
+              colorMatchOpen ? "bg-forge-500/15 text-forge-300" : "text-mist-200 hover:bg-ink-700"
+            }`}
+          >
+            <IconSparkles width={18} height={18} className="shrink-0" />
+            <span className="flex-1 truncate">AI Color Match</span>
             <span className="rounded bg-forge-500/20 px-1.5 py-0.5 text-[10px] font-medium text-forge-300">
               New
             </span>

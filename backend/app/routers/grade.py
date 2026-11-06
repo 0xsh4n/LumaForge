@@ -48,7 +48,7 @@ def _bake(adjustments: Adjustments, size: int) -> str:
     flat = lattice.reshape(-1, 1, 3)                   # (N^3,1,3), red fastest
     graded = pipeline.render_color_only(flat, adjustments)
     samples = graded.reshape(-1, 3)
-    return grading.write_cube(samples, size, title="LumaForge Export")
+    return grading.write_cube(samples, size, title="Lumetta Export")
 
 
 @router.post("/images/{image_id}/export-lut")
@@ -61,7 +61,7 @@ async def export_lut(image_id: str, req: LutExportRequest) -> Response:
     return Response(
         content=text,
         media_type="text/plain",
-        headers={"Content-Disposition": 'attachment; filename="lumaforge.cube"'},
+        headers={"Content-Disposition": 'attachment; filename="lumetta.cube"'},
     )
 
 

@@ -5,7 +5,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.concurrency import run_in_threadpool
 
 from ..imaging.auto_enhance import auto_enhance
-from ..schemas import AutoEnhanceRequest, AutoEnhanceResult
+from ..imaging.colormatch import color_match
+from ..schemas import AutoEnhanceRequest, AutoEnhanceResult, ColorMatchResult
 from ..store import store
 
 router = APIRouter(prefix="/api/images", tags=["enhance"])
@@ -22,3 +23,12 @@ async def auto_enhance_image(image_id: str, req: AutoEnhanceRequest) -> AutoEnha
         auto_enhance, session.preview_base, req.mode, req.strength
     )
     return AutoEnhanceResult(**result)
+
+
+@router.post("/{image_id}/color-match", response_model=ColorMatchResult)
+async def color_match_image(image_id: str) -> ColorMatchResult:
+    session = store.get(image_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Image not found")
+    result = await run_in_threadpool(color_match, session.preview_base)
+    return ColorMatchResult(**result)

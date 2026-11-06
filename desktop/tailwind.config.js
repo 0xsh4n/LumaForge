@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // LumaForge "graphite & forge" dark identity.
+        // Lumetta "graphite & forge" dark identity.
         ink: {
           900: "#07080a", // app background
           850: "#0d0f13",

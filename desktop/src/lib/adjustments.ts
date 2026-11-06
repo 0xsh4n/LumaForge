@@ -143,6 +143,35 @@ export function lerpAdjustments(a: Adjustments, b: Adjustments, t: number): Adju
   return out;
 }
 
+/** Scale a look's light/color/detail/effects/grade from neutral by t∈[0,1].
+ *  Used by AI Color Match's Intensity control. Grade scaling covers the fields
+ *  Color Match actually sets (split-tone saturations and colour-balance wheels);
+ *  curves/HSL/LUT are left as the look defines them. masks/motion are untouched
+ *  (Color Match preserves the user's existing ones at the call site). */
+export function scaleLookFromNeutral(look: Adjustments, t: number): Adjustments {
+  const out = cloneAdjustments(look);
+  const n = neutralAdjustments();
+  (["light", "color", "detail", "effects"] as AdjustGroup[]).forEach((group) => {
+    const gl = look[group] as unknown as Record<string, number>;
+    const gn = n[group] as unknown as Record<string, number>;
+    const go = out[group] as unknown as Record<string, number>;
+    Object.keys(go).forEach((k) => {
+      go[k] = +(gn[k] + (gl[k] - gn[k]) * t).toFixed(2);
+    });
+  });
+  out.grade.split_tone.shadow_sat = +(look.grade.split_tone.shadow_sat * t).toFixed(2);
+  out.grade.split_tone.highlight_sat = +(look.grade.split_tone.highlight_sat * t).toFixed(2);
+  (["shadows", "midtones", "highlights", "globe"] as const).forEach((zone) => {
+    const w = out.grade.color_balance[zone];
+    const lw = look.grade.color_balance[zone];
+    w.r = +(lw.r * t).toFixed(2);
+    w.g = +(lw.g * t).toFixed(2);
+    w.b = +(lw.b * t).toFixed(2);
+    w.luminance = +(lw.luminance * t).toFixed(2);
+  });
+  return out;
+}
+
 export interface SliderSpec {
   key: string;
   label: string;

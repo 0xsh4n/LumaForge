@@ -6,11 +6,14 @@ import BottomBar from "../editor/BottomBar";
 import AutoEnhancePanel from "../editor/AutoEnhancePanel";
 import PortraitPanel from "../editor/PortraitPanel";
 import MasksPanel from "../editor/MasksPanel";
-import { IconClose } from "../components/icons";
+import ColorMatchPanel from "../editor/ColorMatchPanel";
+import { IconClose, IconExport, IconImport } from "../components/icons";
 
 export default function EditorSection() {
   const image = useEditor((s) => s.image);
   const closeImage = useEditor((s) => s.closeImage);
+  const saveProject = useEditor((s) => s.saveProject);
+  const openProjectDialog = useEditor((s) => s.openProjectDialog);
 
   return (
     <div className="flex h-full flex-col">
@@ -28,13 +31,29 @@ export default function EditorSection() {
                   {image.width}×{image.height} · {image.bit_depth}-bit
                 </span>
               </div>
-              <button
-                onClick={closeImage}
-                title="Close image"
-                className="flex h-7 w-7 items-center justify-center rounded-md text-mist-400 hover:bg-ink-700 hover:text-mist-100"
-              >
-                <IconClose width={16} height={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => void saveProject()}
+                  title="Save project (.lfp)"
+                  className="flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] text-mist-300 hover:bg-ink-700 hover:text-mist-100"
+                >
+                  <IconExport width={14} height={14} /> Save
+                </button>
+                <button
+                  onClick={() => void openProjectDialog()}
+                  title="Open project (.lfp)"
+                  className="flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] text-mist-300 hover:bg-ink-700 hover:text-mist-100"
+                >
+                  <IconImport width={14} height={14} /> Open
+                </button>
+                <button
+                  onClick={closeImage}
+                  title="Close image"
+                  className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-mist-400 hover:bg-ink-700 hover:text-mist-100"
+                >
+                  <IconClose width={16} height={16} />
+                </button>
+              </div>
             </div>
           )}
           <div className="relative min-h-0 flex-1">
@@ -42,6 +61,7 @@ export default function EditorSection() {
             <AutoEnhancePanel />
             <PortraitPanel />
             <MasksPanel />
+            <ColorMatchPanel />
           </div>
         </div>
         <AdjustPanel />

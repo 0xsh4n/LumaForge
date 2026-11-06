@@ -1,8 +1,8 @@
-# Installing & Building LumaForge
+# Installing & Building Lumetta
 
 ## For end users (once a release is built)
 
-Run the installer for your platform and launch LumaForge. Everything needed to
+Run the installer for your platform and launch Lumetta. Everything needed to
 run — including the processing engine — is bundled. Windows 10/11 already include
 WebView2; if it is missing, the installer fetches it automatically.
 
@@ -45,8 +45,8 @@ Hardware compatibility → Supported formats):
 ```
 
 If a wheel is unavailable for your Python version, the app still runs — just
-without that format. (RAW development becomes a first-class pipeline in a later
-phase; see ROADMAP.)
+without that format. (RAW development is a first-class part of the engine — see
+the [User Guide](USER_GUIDE.md).)
 
 ### Run
 
@@ -58,18 +58,18 @@ phase; see ROADMAP.)
 
 ### AI models (optional)
 
-LumaForge works fully without any AI models — manual editing, Auto Enhance,
-color grading and RAW development are all classical. The AI features in phases
-4–7 (masking, depth & bokeh, upscaling, face restoration, the optional Luma
-Assistant) use optional models downloaded on demand from their **official
+Lumetta works fully without any AI models — manual editing, Auto Enhance, Color
+Match, color grading and RAW development are all classical. The optional AI
+features (masking, depth & bokeh, upscaling, face restoration, the optional
+Lumetta Assistant) use models downloaded on demand from their **official
 sources**.
 
 - **In the app:** open **Settings → AI models** to download, inspect and remove
   models. It shows the exact folder they are stored in and how much disk they use.
 - **Storage location** (per-user data dir, *not* the repo):
-  - Windows `%APPDATA%\LumaForge\models\`
-  - macOS `~/Library/Application Support/LumaForge/models/`
-  - Linux `~/.local/share/LumaForge/models/` (or `$LUMAFORGE_DATA_DIR/models/`)
+  - Windows `%APPDATA%\Lumetta\models\`
+  - macOS `~/Library/Application Support/Lumetta/models/`
+  - Linux `~/.local/share/Lumetta/models/` (or `$LUMETTA_DATA_DIR/models/`)
 - **Manual install & full link table:** see **[MODELS.md](MODELS.md)** — download
   from the official link and save it under the models folder with the exact file
   name listed there.
@@ -99,7 +99,7 @@ The sidecar step alone:
 ./scripts/build_sidecar.sh   # Windows:  .\scripts\build_sidecar.ps1
 ```
 
-produces `desktop/src-tauri/binaries/lumaforge-backend-<target-triple>[.exe]`,
+produces `desktop/src-tauri/binaries/lumetta-backend-<target-triple>[.exe]`,
 which Tauri picks up via `bundle.externalBin` in `tauri.conf.json`.
 
 ### Troubleshooting
@@ -111,6 +111,6 @@ which Tauri picks up via `bundle.externalBin` in `tauri.conf.json`.
   for the shell/sidecar can vary by Tauri patch version. `npm run tauri:dev`
   prints the precise identifier to add to
   `desktop/src-tauri/capabilities/default.json`.
-- **Python 3.14** — all Phase-1 dependencies ship wheels for 3.14. Heavy AI
-  packages (PyTorch, ONNX Runtime) used in later phases may lag; use Python
-  3.11/3.12 if you need those before upstream wheels land.
+- **Python 3.14** — all core dependencies ship wheels for 3.14. Heavy optional-AI
+  packages (ONNX Runtime) may lag; use Python 3.11/3.12 if you need those before
+  upstream wheels land.

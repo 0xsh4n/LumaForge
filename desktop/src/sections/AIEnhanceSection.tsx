@@ -1,18 +1,16 @@
 import { useEditor } from "../store/editorStore";
 import { IconWand, IconFace, IconSubject, IconSparkles, IconImport } from "../components/icons";
 
-const FEATURES = [
+const COMING = [
   {
     icon: IconSubject,
-    name: "DSLR Look",
-    phase: 5,
-    body: "Subject separation, natural background blur and lens-character rendering (35/50/85/135mm) to give phone photos a professional camera feel.",
+    name: "DSLR Look & Depth",
+    body: "Subject separation, depth-based background blur and lens-character rendering (35/50/85/135 mm) to give phone photos a professional camera feel.",
   },
   {
     icon: IconSparkles,
     name: "Upscaling & Restoration",
-    phase: 6,
-    body: "Real-ESRGAN 2×/4× upscaling and detail restoration with VRAM-aware tiled inference for 4 GB GPUs.",
+    body: "2×/4× AI upscaling and detail restoration with VRAM-aware tiled inference for modest GPUs.",
   },
 ];
 
@@ -22,18 +20,18 @@ export default function AIEnhanceSection() {
   const importImage = useEditor((s) => s.importImage);
   const openAutoEnhance = useEditor((s) => s.openAutoEnhance);
   const openPortrait = useEditor((s) => s.openPortrait);
+  const openColorMatch = useEditor((s) => s.openColorMatch);
 
   return (
     <div className="lf-scroll h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl px-8 py-10">
         <h1 className="text-2xl font-semibold text-mist-100">AI Enhancement</h1>
         <p className="mt-1 max-w-2xl text-sm text-mist-500">
-          LumaForge's AI features run entirely on your machine using local models. They
-          build on the same image-analysis engine already working in Phase 1 — shown below
-          for the current photo.
+          Lumetta's AI features run entirely on your machine. They build on the same
+          local image-analysis engine — shown below for the current photo.
         </p>
 
-        {/* Real Phase-1 analysis */}
+        {/* Live image analysis */}
         <section className="mt-6 lf-card p-5">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-mist-400">
             Image analysis
@@ -124,14 +122,38 @@ export default function AIEnhanceSection() {
           </button>
         </section>
 
-        {/* Roadmap */}
+        {/* Color Match — live */}
+        <section className="mt-4 lf-card relative overflow-hidden p-5">
+          <span className="absolute right-4 top-4 rounded bg-forge-500/20 px-2 py-0.5 text-[11px] font-medium text-forge-300">
+            Available
+          </span>
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-forge-500/15 text-forge-400">
+            <IconSparkles width={20} height={20} />
+          </div>
+          <div className="text-base font-medium text-mist-100">AI Color Match</div>
+          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-mist-500">
+            Reads the photo's colour, light and mood and proposes several adjustable
+            grading looks — warm cinematic, cool editorial, vibrant and more — with skin
+            tones protected and an intensity dial. Applied by the deterministic engine.
+          </p>
+          <button
+            onClick={() => void openColorMatch()}
+            disabled={!image}
+            className="lf-btn-primary mt-4 disabled:opacity-50"
+          >
+            <IconSparkles width={16} height={16} />
+            {image ? "Open Color Match" : "Import a photo first"}
+          </button>
+        </section>
+
+        {/* Coming soon */}
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {FEATURES.map((f) => {
+          {COMING.map((f) => {
             const Icon = f.icon;
             return (
               <div key={f.name} className="relative lf-card p-5">
                 <span className="absolute right-4 top-4 rounded bg-ink-700 px-2 py-0.5 text-[11px] font-medium text-mist-500">
-                  Phase {f.phase}
+                  Soon
                 </span>
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-forge-500/15 text-forge-400">
                   <Icon width={20} height={20} />

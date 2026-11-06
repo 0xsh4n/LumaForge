@@ -1,6 +1,6 @@
-# LumaForge Architecture
+# Lumetta Architecture
 
-LumaForge is split into three layers that communicate over a local HTTP boundary.
+Lumetta is split into three layers that communicate over a local HTTP boundary.
 This keeps the UI responsive and the image math in a language with first-class
 scientific/AI tooling, while still shipping as a single native application.
 
@@ -103,7 +103,7 @@ A `.lfp` project stores the schema version, a reference to the original image an
 the full `Adjustments` — never pixels. Originals are therefore never rewritten
 and projects stay tiny and portable.
 
-## Where AI fits (later phases)
+## Where AI fits
 
 Each AI feature is added **behind the same pipeline interface**: a model produces
 a mask, a depth map, or a set of adjustment parameters, which the deterministic

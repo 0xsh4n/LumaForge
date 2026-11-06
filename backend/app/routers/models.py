@@ -1,6 +1,6 @@
 """Model Manager (Phase 7 §25).
 
-Lists every optional AI model LumaForge can use (see :mod:`app.models_registry`),
+Lists every optional AI model Lumetta can use (see :mod:`app.models_registry`),
 reports what is installed and where, and downloads / removes model files on
 request — from trusted sources only, with live progress and optional checksum
 verification. Nothing here is required for the classical editing engine; these
@@ -23,7 +23,7 @@ from ..config import get_settings
 router = APIRouter(prefix="/api/models", tags=["models"])
 
 # A friendly, honest User-Agent — some hosts reject the default urllib one.
-_UA = "LumaForge/0.1 (+https://github.com/0xsh4n/LumaForge)"
+_UA = "Lumetta/0.1 (+https://github.com/0xsh4n/Lumetta)"
 _CHUNK = 1 << 20  # 1 MiB
 
 

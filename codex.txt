@@ -1,0 +1,377 @@
+================================================================================
+Lumetta — Codex task prompt: remaining AI / model-inference features
+================================================================================
+
+Paste this whole file to Codex (or an agentic coding model) as the task. It
+describes the EXACT remaining work, the architecture you must respect, the files
+to touch, and the acceptance tests. Follow it precisely — the codebase already
+has a working classical core and a model-download manager; your job is to plug
+real model inference into the existing, non-destructive pipeline WITHOUT
+breaking any of it.
+
+--------------------------------------------------------------------------------
+0. READ FIRST — non-negotiable architecture rules
+--------------------------------------------------------------------------------
+Lumetta is a local, offline photo studio: a Tauri 2 (Rust) shell + React/TS
+frontend (desktop/) + a Python FastAPI backend (backend/) launched as a
+PyInstaller sidecar. All image math is in the Python backend.
+
+RULES you MUST keep (every existing feature obeys them):
+
+1. NON-DESTRUCTIVE / PARAMETERS-NOT-PIXELS. AI never writes pixels directly. AI
+   produces PARAMETERS, MASKS or MAPS; the single deterministic pipeline
+   (backend/app/imaging/pipeline.py `render()`) renders them. Model output must
+   land in the `Adjustments` schema (backend/app/schemas.py) and be re-editable.
+   The imported original is never mutated.
+
+2. ONE PIPELINE for preview + export. `render(original, adjustments, px_scale,
+   faces)` is used for both; `px_scale` = (this render's long edge)/(original's
+   long edge) keeps spatial effects consistent between a small preview and a
+   full-size export. Any spatial effect you add must scale by px_scale or by a
+   fraction of the image dimensions so preview ≈ export.
+
+3. MODELS ARE OPTIONAL + ON-DEMAND, from the registry only. Never hardcode a
+   download URL. Use backend/app/models_registry.py:
+       spec = reg.get("<id>"); reg.model_path(spec); reg.is_installed(spec)
+   If a model is not installed, the feature must DEGRADE GRACEFULLY: return a
+   clear "model not installed" response (never crash, never silently no-op).
+   The Settings → AI models UI already downloads/installs them.
+
+4. CPU FALLBACK IS EXPLICIT, NEVER SILENT. Prefer onnxruntime CUDAExecution
+   Provider when available (see backend/app/imaging/hardware.py
+   `_detect_cuda_runtimes`), else CPUExecutionProvider — and report which ran,
+   so the UI can say "running on CPU (slower)". Target hardware: NVIDIA GTX 1650,
+   4 GB VRAM, 8 GB RAM. Use tiled inference + model unloading to fit 4 GB.
+
+5. NATURAL RESULTS over exaggerated AI. Halo-free mattes, no plastic skin, no
+   oversharpening.
+
+6. Keep everything TESTED. Add pytest tests under backend/tests/ for every new
+   module (mirror the style of test_masks.py / test_motion.py / test_colormatch.py
+   — synthetic images, assert shapes/ranges/behaviour). Frontend must pass
+   `cd desktop && npm run build` (tsc + vite). Backend: `cd backend &&
+   ../.venv/bin/python -m pytest -q` (currently 82 passing, 2 skipped — keep them
+   green).
+
+--------------------------------------------------------------------------------
+1. PROJECT MAP (what already exists — do not rebuild)
+--------------------------------------------------------------------------------
+backend/app/
+  schemas.py            Pydantic Adjustments (light/color/detail/effects/grade/
+                        portrait/masks[]/motion) + requests/responses. THE contract.
+  config.py             get_settings(); settings.models_dir is where models live.
+  models_registry.py    Trusted catalog. ModelSpec(id,name,phase,feature,filename,
+                        url,source_page,license,size_mb,sha256,kind,min_vram_mb).
+                        Helpers: all_models(), get(id), is_safe_url(url),
+                        model_path(spec), is_installed(spec), disk_size(spec).
+                        Relevant ids: birefnet_general, birefnet_lite,
+                        mediapipe_face_landmarker, sam2_hiera_tiny,
+                        depth_anything_v2_small, realesrgan_x4plus,
+                        realesrgan_x2plus, gfpgan_v1_4, codeformer, moondream2,
+                        smolvlm_500m.
+  store.py              In-memory ImageSession: .original (float32 RGB [0,1] full
+                        res), .preview_base (downscaled), .preview_scale, .faces,
+                        .id. store.get(image_id).
+  imaging/
+    pipeline.py         render(original, a: Adjustments, px_scale=1.0, faces=None)
+                        Stage order: wb+exposure → tone → local contrast → color
+                        → grade → portrait(5c) → masks(5d) → noise → sharpen →
+                        defringe → distortion → motion(8b) → vignette → grain.
+    adjustments.py      Primitive ops (apply_* ) reused everywhere. Reuse these.
+    color.py            luminance(), to_uint8(), srgb<->linear.
+    masks.py            Phase-4 masking engine. Mask types "linear"/"radial"/
+                        "brush" → build_mask(mask,h,w); apply_masks(img, masks,
+                        px_scale) composites each mask's LocalAdjust. ← AI MASKS
+                        PLUG IN HERE.
+    motion.py           Phase-5 motion blur (directional/zoom/spin).
+    colormatch.py       Phase-7 AI Color Match (classical). Returns editable cards.
+    auto_enhance.py     analyze_scene(img) → SceneStats (reusable).
+    face.py             YuNet detector + face region masks (model via registry).
+    hardware.py         GPU/VRAM + runtime detection for the Settings report.
+  routers/
+    images.py process.py enhance.py grade.py portrait.py projects.py system.py
+    models.py           Model Manager API (list/download/progress/delete).
+desktop/src/
+  types.ts              TS mirror of schemas.py (keep in sync!).
+  lib/api.ts            Typed backend client.
+  lib/adjustments.ts    neutralAdjustments(), cloneAdjustments(JSON deep), makeMask().
+  store/editorStore.ts  Zustand store; panels dispatch here; render scheduler.
+  editor/*Panel.tsx     Overlay panels (AutoEnhancePanel, PortraitPanel, MasksPanel,
+                        ColorMatchPanel) — copy this pattern for new panels.
+  editor/LeftToolbar.tsx  Left tool list (AI Tools / Masks sections).
+  components/RangeControl.tsx  Reusable slider (value/onChange/onStart/onEnd/onReset).
+
+Dev/verify on a machine WITHOUT a GPU or Tauri webkit (e.g. Linux):
+  backend: cd backend && ../.venv/bin/python -m uvicorn app.main:app --port 8756
+  frontend: cd desktop && npm run dev   (Vite at http://localhost:1420)
+  The React app runs in a plain browser and talks to 127.0.0.1:8756. DEV hooks:
+  window.__LF_STORE__ (zustand store) and window.__LF_API__ (api client). e.g.
+  window.__LF_STORE__.getState().openPath('/abs/path.jpg') loads an image.
+
+Add a backend/requirements-ai.txt for heavy deps (do NOT add them to
+requirements.txt — the base app must stay light). Suggested:
+  onnxruntime>=1.17            # CPU; document onnxruntime-gpu as the CUDA option
+  (torch/torchvision ONLY if a task truly needs it; prefer ONNX)
+Load these deps lazily inside functions (import inside the call), so the app
+still boots when they are absent, and the feature reports "install the AI extras".
+
+--------------------------------------------------------------------------------
+2. SHARED INFRASTRUCTURE TO BUILD FIRST (do this before the features)
+--------------------------------------------------------------------------------
+
+2A. Inference runtime helper — backend/app/imaging/inference.py
+    - `onnx_session(model_path, prefer_gpu=True) -> (session, provider_name)`:
+      create an onnxruntime InferenceSession choosing providers
+      ["CUDAExecutionProvider","CPUExecutionProvider"] (filter to available ones
+      from ort.get_available_providers()). Return which provider actually loaded.
+    - LRU of at most 1–2 loaded sessions (VRAM budget). Expose `unload_all()`.
+    - `tiled_infer(session, img, tile, overlap, run_fn)` helper for big inputs:
+      split into overlapping tiles, run, feather-blend back. Used by upscaling and
+      high-res segmentation to respect 4 GB VRAM.
+    - Everything import-guarded so missing onnxruntime → informative RuntimeError
+      the routers translate to a clean 503/"install AI extras" message.
+
+2B. GPU scheduler / task queue — backend/app/imaging/scheduler.py  (Phase 6, §12/§26)
+    - A process-wide serial queue for high-memory model jobs (so two 4 GB jobs
+      never run at once). `submit(job) -> job_id`, `status(job_id)`, `cancel(job_id)`.
+    - Tracks: state (queued/running/done/error/cancelled), progress 0..1, the
+      provider used (gpu/cpu), and a human message.
+    - On each job: load model (via 2A), run (cancellable between tiles), unload if
+      low-memory mode. Report live VRAM via hardware.py's nvidia-smi query.
+    - Router backend/app/routers/ai_jobs.py: GET /api/ai/jobs, GET
+      /api/ai/jobs/{id}, POST /api/ai/jobs/{id}/cancel. Upscaling (task 5) uses it.
+    - Frontend: a small "AI tasks" indicator in BottomBar showing active job +
+      provider + cancel. Mirror the model-download polling in editorStore.
+
+--------------------------------------------------------------------------------
+3. TASK — Phase 4: AI masks (BiRefNet subject/background/sky; optional SAM2)
+--------------------------------------------------------------------------------
+GOAL: new mask SOURCES that feed the EXISTING apply_masks compositor, so AI masks
+get the same per-mask LocalAdjust, feather, invert, opacity and stacking the
+linear/radial/brush masks already have.
+
+BACKEND
+- schemas.py: extend Mask.type Literal to add "ai_subject","ai_background","ai_sky".
+  Add optional fields the UI/geometry don't need for AI masks (they already have
+  invert/feather/opacity/local). Add `ai_model: Optional[str] = None` (e.g.
+  "birefnet_lite" vs "birefnet_general"; default to lite for 4 GB).
+- New backend/app/imaging/segment.py:
+    * `subject_mask(img, model_id) -> np.ndarray float32 [0,1]` using BiRefNet ONNX
+      (registry ids birefnet_lite / birefnet_general). Resize to the model's input,
+      run, upscale the matte to img size, edge-refine (guided/bilateral) so hair
+      boundaries are halo-free. "background" = 1 - subject. "sky" = subject model
+      constrained to the upper region + blue/bright prior, OR a sky-specific pass;
+      a simple, honest classical sky prior is acceptable if no sky model installed.
+    * Cache per (session.id, model_id, mask-kind, resolution) — segmentation is
+      expensive; recompute only when the image or model changes, NOT on every
+      slider drag. Put the cache keyed by image id; invalidate on re-import/raw
+      re-develop.
+- masks.py build_mask(): for the AI types, fetch the cached matte for the current
+  image instead of computing geometry. Because build_mask currently has only
+  (mask,h,w), thread the ImageSession (or a mask-source resolver) through
+  apply_masks → pipeline.render. Cleanest: pipeline.render already receives the
+  working image; pass an optional `mask_sources` dict / the session so AI masks
+  can look up their cached matte. Keep linear/radial/brush unchanged.
+- If the model is not installed → the AI mask contributes nothing and the API
+  response flags it so the UI can prompt "Install BiRefNet in Settings → AI models".
+- New endpoint (compute + cache a matte up front, like detect-faces):
+  POST /api/images/{id}/ai-mask  body {kind:"subject"|"background"|"sky",
+  model:"birefnet_lite"} → {available:bool, cached:bool, message?:str}. The editor
+  calls this when the user adds an AI mask; the matte is then reused at render time.
+
+FRONTEND
+- LeftToolbar "Masks" section: enable "Subject Mask" / "Background Mask" /
+  "Sky Mask" (currently disabled placeholders). On click: if the model isn't
+  installed, route the user to Settings → AI models; else POST /ai-mask, then
+  addMask of the matching ai_* type and open MasksPanel (reuse the existing
+  per-mask LocalAdjust UI unchanged).
+- types.ts: mirror the new Mask.type values + ai_model field.
+
+ACCEPTANCE
+- With no model installed: adding an AI mask gives a clear "install model" path;
+  nothing crashes; existing tests stay green.
+- With a model: subject matte separates foreground from background on a test
+  portrait; mask feeds LocalAdjust (e.g. darken background) through render.
+- Tests: backend/tests/test_segment.py — mock/skip if model absent (use
+  pytest.importorskip("onnxruntime") and skip if not reg.is_installed), assert
+  matte shape/range and that background = 1-subject.
+
+--------------------------------------------------------------------------------
+4. TASK — Phase 4: on-canvas BRUSH painting (frontend only, NO model)
+--------------------------------------------------------------------------------
+The backend brush mask already works (schemas.Mask.type=="brush", dabs:[BrushDab
+{x,y,radius,hardness,erase}] in normalized 0..1; masks.py _brush renders them).
+Only the painting UI is missing.
+
+FRONTEND (desktop/src/editor/PreviewCanvas.tsx + editorStore.ts + MasksPanel.tsx)
+- When the active mask (maskPanel.activeId) is a brush mask AND a "paint" mode is
+  on, capture pointer events over the image: on drag, append BrushDab(s) at the
+  normalized cursor position (map screen→image coords using the preview transform
+  already in PreviewCanvas), with current radius/hardness, erase=true when an
+  "erase" toggle is on. Throttle to ~1 dab / few px.
+- Store: addBrushDab(maskId, dab) and a brushSettings {radius,hardness,erase} in
+  the mask panel. Each stroke = one undo step (begin on pointerdown, end on up).
+- MasksPanel: when active mask is brush, show radius/hardness sliders + erase
+  toggle + "Clear" (empties dabs). Enable the "Brush" tool in LeftToolbar
+  (addMask("brush")).
+- Draw a subtle overlay of the mask on the canvas (semi-transparent red) while the
+  Masks panel is open, so the user sees what's selected (applies to all mask types).
+
+ACCEPTANCE: painting on the image adds dabs; the masked local adjustment shows in
+the preview; undo removes a stroke; `npm run build` passes.
+
+--------------------------------------------------------------------------------
+5. TASK — Phase 5: Depth & Bokeh workspace (Depth Anything V2 Small) + DSLR look
+--------------------------------------------------------------------------------
+GOAL: a depth-driven, variable background blur (bokeh) that is non-destructive and
+editable — the real "DSLR look / depth" feature.
+
+BACKEND
+- schemas.py: add a `DepthAdjust` section to Adjustments (default = disabled):
+    enabled:bool=False, focus:float (0..1 focus distance), aperture:float
+    (f-number preset, e.g. 1.4..8 → blur strength), transition:float (0..100),
+    bokeh_shape ("round"/"hex"), subject_protect:float, highlight_bloom:float.
+- backend/app/imaging/depth.py:
+    * `depth_map(img, model_id="depth_anything_v2_small") -> np.ndarray float32
+      [0,1]` via ONNX (registry depth_anything_v2_small). Cache per (image id,
+      resolution) like the AI masks.
+    * `apply_bokeh(img, depth, params, px_scale)` — variable-radius blur where
+      radius grows with |depth - focus| scaled by aperture; combine with the
+      subject matte (task 3) + edge refinement so hair/glass edges are halo-free;
+      optional highlight bloom for specular bokeh. Must be resolution-consistent.
+- pipeline.render(): add a stage (after masks, before motion) that, when
+  a.depth.enabled and the depth map is available, applies apply_bokeh. If the
+  depth model isn't installed → stage is a no-op and the API flags it.
+- Endpoint POST /api/images/{id}/depth → {available, cached, message?} and
+  (optional) GET the depth map as a PNG so the UI can show/inspect/correct it.
+
+FRONTEND
+- New editor/DepthPanel.tsx (copy ColorMatchPanel/PortraitPanel pattern): aperture
+  presets (f/1.4…f/8), focus picker (click the subject on the preview to set focus
+  distance from the depth map), transition, subject protect, bloom; an
+  inspect/overlay toggle for the depth map. Wire into LeftToolbar "AI Tools".
+- types.ts + api.ts + editorStore: mirror DepthAdjust and depth endpoint; one
+  undo step per session like the other AI panels.
+
+ACCEPTANCE: on a portrait with the depth model installed, background blurs while
+the subject stays sharp; focus point is movable; blur scales with aperture; fully
+re-editable; preview matches export. Tests: depth map shape/range; bokeh increases
+blur away from focus; no-op when disabled or model absent.
+
+--------------------------------------------------------------------------------
+6. TASK — Phase 6: Real-ESRGAN upscaling + restoration (uses the GPU scheduler)
+--------------------------------------------------------------------------------
+Upscaling is a one-shot transform that produces a NEW larger original (not a live
+slider), so it runs as a scheduler job (task 2B) and replaces/creates an image
+session at higher resolution — the edit parameters carry over.
+
+BACKEND
+- backend/app/imaging/upscale.py:
+    * `upscale(img, scale, model_id) -> np.ndarray` using Real-ESRGAN ONNX
+      (realesrgan_x4plus / realesrgan_x2plus) with TILED inference (task 2A) to fit
+      4 GB VRAM; CPU fallback with explicit notice. Optional denoise pre-pass.
+- Run via scheduler (cancellable, progress per tile). On completion, upscale the
+  session's ORIGINAL (not the preview) and update the store so subsequent renders
+  use the larger original; the existing Adjustments still apply (px_scale handles
+  the preview). Face restoration (GFPGAN/CodeFormer, registry ids gfpgan_v1_4 /
+  codeformer) is an OPTIONAL post-step gated behind an explicit toggle + a
+  "generative — may alter faces" warning (identity is otherwise preserved
+  everywhere else).
+- Endpoint POST /api/images/{id}/upscale {scale:2|4, model, denoise, restore_faces}
+  → {job_id}. Poll via /api/ai/jobs/{id}.
+
+FRONTEND
+- An "Upscale" action (LeftToolbar AI Tools or Export area) → options dialog
+  (2×/4×, model, denoise, restore faces) → starts a job → BottomBar shows progress
+  + provider (GPU/CPU) + cancel → on done, the canvas reflects the new resolution.
+
+ACCEPTANCE: 2×/4× produces a larger image; tiling keeps memory bounded; job is
+cancellable; CPU fallback is announced; model-absent path is clean. Tests: tiling
+reassembles to the right size; scheduler state transitions; skip if model absent.
+
+--------------------------------------------------------------------------------
+7. TASK — Phase 7: Lumetta Assistant (optional local VLM) + model-driven Color Match
+--------------------------------------------------------------------------------
+GOAL: natural-language editing requests → STRUCTURED JSON adjustment parameters the
+user APPROVES before applying. The VLM NEVER manipulates pixels — it only proposes
+a JSON patch over the Adjustments schema, which the deterministic pipeline renders.
+
+BACKEND
+- backend/app/imaging/assistant.py:
+    * A strict JSON schema describing the editable fields (subset of Adjustments:
+      light/color/detail/effects + grade split-tone/color-balance). Build the VLM
+      prompt from: the request text + compact image stats (reuse
+      auto_enhance.analyze_scene + colormatch scene tags) + the schema.
+    * VLM transport: prefer a local Ollama HTTP endpoint (http://127.0.0.1:11434)
+      if reachable; else llama.cpp server; model ids moondream2 / smolvlm_500m
+      (registry, kind="vlm"). Detect availability; if NONE present, FALL BACK to a
+      deterministic rule-based intent parser (keyword → parameter deltas, e.g.
+      "warmer", "brighter", "more contrast", "vintage", "black and white", "blur
+      the background"→enable depth bokeh). The feature MUST work with no VLM.
+    * Validate + clamp the model's JSON against the Pydantic schema; reject/repair
+      out-of-range values; NEVER apply unvalidated output.
+- Endpoint POST /api/images/{id}/assistant {text} → {adjustments (a proposed
+  Adjustments patch), summary:str, source:"vlm"|"rules", notes:[...]}. The client
+  shows a diff/preview and the user clicks Apply (one undo step) or Discard.
+- For model-driven Color Match (augmenting the existing classical colormatch.py):
+  when a VLM is present, optionally add 1–2 extra bespoke look cards described by
+  the VLM (still returned as editable Adjustments cards). Classical cards always
+  present.
+
+FRONTEND
+- editor/AssistantPanel.tsx: a text box ("make the sky more dramatic and warm the
+  skin"), a Send button, a spinner, then a proposed-change preview with
+  Apply/Discard + Intensity; show source (local AI vs. rules) honestly. Wire into
+  LeftToolbar AI Tools. types.ts + api.ts + store mirror the endpoint.
+
+ACCEPTANCE: a request like "brighter and warmer with teal shadows" yields a valid,
+clamped Adjustments the pipeline renders; with no VLM the rule-based fallback still
+produces a sensible result; the user always approves before anything applies.
+Tests: schema validation clamps bad values; rule fallback maps common phrases;
+endpoint returns a renderable Adjustments.
+
+--------------------------------------------------------------------------------
+8. GENERAL ACCEPTANCE / DEFINITION OF DONE
+--------------------------------------------------------------------------------
+- backend: `cd backend && ../.venv/bin/python -m pytest -q` stays green (add new
+  tests; skip model-dependent ones cleanly when the model/onnxruntime is absent via
+  pytest.importorskip + reg.is_installed checks).
+- frontend: `cd desktop && npm run build` passes (keep types.ts in sync with
+  schemas.py; update lib/adjustments.ts neutralAdjustments()/clone for any new
+  Adjustments sections, and lerp/scale helpers if a new section should respond to
+  Intensity).
+- Every feature degrades gracefully with models absent and announces CPU vs GPU.
+- No feature mutates the original or bypasses pipeline.render.
+- Update docs/ROADMAP.md, CHANGELOG.md, docs/MODELS.md and the Home/Settings copy
+  to reflect what shipped.
+- Keep the visual + code style of the existing panels and modules (read a couple
+  first: colormatch.py, masks.py, ColorMatchPanel.tsx, MasksPanel.tsx).
+
+Work task-by-task, run the tests after each, and do not break the classical core
+(Phases 1–3, Color Grading, RAW, Masks, Motion, Color Match) which is already
+complete and tested.
+
+--------------------------------------------------------------------------------
+9. FINAL PRODUCT POLISH (do this LAST, once the features above land)
+--------------------------------------------------------------------------------
+The app must read as a finished consumer product, NOT a dev build.
+
+- NO "Phase 1/2/3…"/"P4"/"phases 4–7"/"coming in Phase N" wording anywhere a USER
+  can see: the Home page, Settings, the left toolbar, AI panels, tooltips, badges,
+  empty states, about text. Internal source-code COMMENTS may keep phase numbers;
+  user-visible strings must not. (The current UI was already cleaned of these —
+  keep it that way as you add features: describe capabilities by NAME, and gate
+  not-yet-available tools with a plain "Soon"/"Coming soon", never a phase.)
+- Home page stays professional: a brand hero, Import / Open-project actions, recent
+  projects, and a clean capability showcase by feature name — no roadmap-with-phase
+  chips. New features join the showcase by name when they ship; mark still-missing
+  ones with a subtle, number-free "coming soon".
+- Settings → AI models groups models by human CATEGORY (e.g. "Masking &
+  segmentation", "Depth & bokeh", "Upscaling & restoration", "Restoration &
+  assistant"), never by "Phase N". The model registry keeps its `phase` field for
+  ordering; just don't surface the number.
+- Honest, product-grade copy: say what a thing does, announce CPU-vs-GPU and
+  model-not-installed states plainly, and never over-promise.
+- Dev docs (docs/ROADMAP.md, CHANGELOG.md) MAY keep phase numbers — they are not
+  the product.
+================================================================================

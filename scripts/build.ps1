@@ -1,4 +1,4 @@
-# Build the full LumaForge desktop app (Windows PowerShell):
+# Build the full Lumetta desktop app (Windows PowerShell):
 #   1. freeze the Python backend into the sidecar .exe
 #   2. build the frontend + native Tauri bundle (.msi / NSIS .exe installer)
 $ErrorActionPreference = "Stop"

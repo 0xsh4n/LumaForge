@@ -1,7 +1,7 @@
-//! LumaForge native shell.
+//! Lumetta native shell.
 //!
 //! The Tauri app owns the window and launches the Python processing engine as a
-//! bundled **sidecar** executable (`lumaforge-backend`), talking to it over
+//! bundled **sidecar** executable (`lumetta-backend`), talking to it over
 //! `127.0.0.1`. In development the sidecar binary is absent, so startup simply
 //! logs and continues — the dev script runs the backend with uvicorn instead,
 //! and the frontend connects to it the same way.
@@ -16,12 +16,12 @@ use tauri_plugin_shell::ShellExt;
 struct BackendProcess(Mutex<Option<CommandChild>>);
 
 fn start_backend(app: &tauri::AppHandle) {
-    let sidecar = match app.shell().sidecar("lumaforge-backend") {
+    let sidecar = match app.shell().sidecar("lumetta-backend") {
         Ok(cmd) => cmd,
         Err(e) => {
             // Expected in `tauri dev`: no bundled binary. Run the backend
             // separately (see scripts/dev.*). Not a fatal error.
-            eprintln!("[lumaforge] backend sidecar unavailable (dev mode?): {e}");
+            eprintln!("[lumetta] backend sidecar unavailable (dev mode?): {e}");
             return;
         }
     };
@@ -45,14 +45,14 @@ fn start_backend(app: &tauri::AppHandle) {
                             }
                         }
                         CommandEvent::Terminated(payload) => {
-                            eprintln!("[lumaforge] backend exited: {:?}", payload.code);
+                            eprintln!("[lumetta] backend exited: {:?}", payload.code);
                         }
                         _ => {}
                     }
                 }
             });
         }
-        Err(e) => eprintln!("[lumaforge] failed to launch backend sidecar: {e}"),
+        Err(e) => eprintln!("[lumetta] failed to launch backend sidecar: {e}"),
     }
 }
 
@@ -68,7 +68,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building the LumaForge application")
+        .expect("error while building the Lumetta application")
         .run(|app_handle, event| {
             // Make sure the Python engine is stopped with the app.
             if let RunEvent::ExitRequested { .. } = &event {

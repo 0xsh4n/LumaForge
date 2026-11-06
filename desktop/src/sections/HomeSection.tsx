@@ -1,27 +1,34 @@
+import { useEffect } from "react";
 import { useEditor } from "../store/editorStore";
-import { IconImport, IconSliders, IconLayers, IconExport, IconSparkles } from "../components/icons";
+import {
+  IconImport,
+  IconSliders,
+  IconLayers,
+  IconExport,
+  IconSparkles,
+  IconPresets,
+  IconWand,
+  IconFace,
+  IconGradientRadial,
+} from "../components/icons";
+import Logo from "../components/Logo";
 
-const PHASE1 = [
-  { icon: IconImport, title: "Universal import", body: "JPEG, PNG, WebP, TIFF, HEIC and camera RAW — decoded to full-resolution float." },
-  { icon: IconSliders, title: "Manual editing engine", body: "Light, Color, Detail and Effects — real, non-destructive, parameter-driven processing." },
-  { icon: IconLayers, title: "Non-destructive pipeline", body: "Your original is never touched. Every edit is re-derived from the source on demand." },
+const CAPABILITIES = [
+  { icon: IconWand, title: "AI Auto Enhance", body: "One click reads the scene and balances exposure, colour and contrast — every value stays editable." },
+  { icon: IconSparkles, title: "AI Color Match", body: "Adjustable cinematic grading looks, matched to your photo, with skin tones protected." },
+  { icon: IconFace, title: "Portrait Studio", body: "Natural, identity-preserving retouch — skin, eyes, teeth and hair — inside face-aware masks." },
+  { icon: IconSliders, title: "Precision editing", body: "Light, colour, detail and effects: real, non-destructive, parameter-driven controls." },
+  { icon: IconLayers, title: "Masks & local edits", body: "Linear, radial and brush masks with per-area adjustments and selective blur." },
+  { icon: IconGradientRadial, title: "Color grading", body: "Tone curves, HSL, colour wheels, split toning and .cube LUT import & export." },
+  { icon: IconImport, title: "RAW & universal import", body: "Develop camera RAW/DNG and open JPEG, PNG, WebP, TIFF and HEIC at full resolution." },
   { icon: IconExport, title: "High-quality export", body: "Full-resolution JPEG, PNG, WebP or 16-bit TIFF with sRGB profile and metadata." },
 ];
 
-const SHIPPED = [
-  ["Phase 2", "AI Auto Enhance"],
-  ["Phase 2b", "Color Grading"],
-  ["Phase 2c", "RAW Development"],
-  ["Phase 3", "Portrait Studio"],
-  ["Phase 4", "Masks & local edits"],
-  ["Phase 5", "Motion Blur"],
-];
-
-const ROADMAP = [
-  ["Phase 4+", "AI subject / sky masks"],
-  ["Phase 5+", "Depth & bokeh"],
-  ["Phase 6", "Upscaling & restoration"],
-  ["Phase 7", "Color Match · Luma Assistant"],
+const COMING_SOON = [
+  "AI subject & sky masks",
+  "Depth-based bokeh",
+  "AI upscaling & restoration",
+  "Lumetta Assistant",
 ];
 
 export default function HomeSection() {
@@ -29,6 +36,14 @@ export default function HomeSection() {
   const importing = useEditor((s) => s.importing);
   const backend = useEditor((s) => s.backend);
   const setSection = useEditor((s) => s.setSection);
+  const recentProjects = useEditor((s) => s.recentProjects);
+  const loadRecentProjects = useEditor((s) => s.loadRecentProjects);
+  const openProjectDialog = useEditor((s) => s.openProjectDialog);
+  const openProjectPath = useEditor((s) => s.openProjectPath);
+
+  useEffect(() => {
+    void loadRecentProjects();
+  }, [loadRecentProjects]);
 
   return (
     <div className="lf-scroll h-full overflow-y-auto">
@@ -39,19 +54,20 @@ export default function HomeSection() {
             <Logo />
             <div>
               <div className="text-3xl font-semibold tracking-tight text-mist-100">
-                Luma<span className="text-forge-500">Forge</span>
+                Lum<span className="text-forge-500">etta</span>
               </div>
               <div className="text-sm text-mist-500">
-                AI photo enhancement & DSLR conversion studio
+                AI photo enhancement &amp; DSLR conversion studio
               </div>
             </div>
           </div>
           <p className="max-w-xl text-[15px] leading-relaxed text-mist-400">
-            Turn ordinary photographs into professionally processed images — locally,
-            offline, on your own hardware. Start by importing a photo.
+            Turn ordinary photographs into professionally processed images — fully
+            offline, on your own hardware. Every edit is non-destructive and your
+            original is never touched.
           </p>
 
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               onClick={() => void importImage()}
               disabled={importing}
@@ -60,33 +76,46 @@ export default function HomeSection() {
               <IconImport width={18} height={18} />
               {importing ? "Opening…" : "Import a photograph"}
             </button>
+            <button
+              onClick={() => void openProjectDialog()}
+              className="lf-btn-subtle px-4 py-2.5 text-[14px]"
+              title="Open a saved .lfp project"
+            >
+              <IconPresets width={16} height={16} /> Open project
+            </button>
             <BackendPill status={backend.status} />
           </div>
         </div>
 
-        {/* shipped (phases 2–3) */}
-        <div className="mt-10">
-          <SectionLabel>Also in this build</SectionLabel>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {SHIPPED.map(([phase, name]) => (
-              <div
-                key={phase}
-                className="flex items-center gap-2 rounded-lg border border-ink-600 bg-ink-800 px-3 py-2"
-              >
-                <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[10px] font-medium text-teal">
-                  {phase}
-                </span>
-                <span className="text-[13px] text-mist-300">{name}</span>
-              </div>
-            ))}
+        {/* recent projects */}
+        {recentProjects.length > 0 && (
+          <div className="mt-12">
+            <SectionLabel>Recent projects</SectionLabel>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {recentProjects.slice(0, 6).map((p) => (
+                <button
+                  key={p.path}
+                  onClick={() => void openProjectPath(p.path)}
+                  className="lf-card flex items-center gap-3 p-3 text-left transition-colors hover:border-forge-500/50"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink-700 text-mist-400">
+                    <IconPresets width={16} height={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-medium text-mist-100">{p.name}</div>
+                    <div className="truncate text-[11px] text-mist-500">{p.path}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* phase 1 features */}
-        <div className="mt-10">
-          <SectionLabel>Core engine · Phase 1</SectionLabel>
+        {/* capabilities */}
+        <div className="mt-12">
+          <SectionLabel>Everything in the studio</SectionLabel>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {PHASE1.map((f) => {
+            {CAPABILITIES.map((f) => {
               const Icon = f.icon;
               return (
                 <div key={f.title} className="lf-card flex gap-3 p-4">
@@ -103,35 +132,32 @@ export default function HomeSection() {
           </div>
         </div>
 
-        {/* roadmap */}
-        <div className="mt-10">
+        {/* coming soon */}
+        <div className="mt-12">
           <SectionLabel>
             <span className="inline-flex items-center gap-1.5">
-              <IconSparkles width={14} height={14} /> Coming next
+              <IconSparkles width={14} height={14} /> Coming soon
             </span>
           </SectionLabel>
           <div className="mt-3 flex flex-wrap gap-2">
-            {ROADMAP.map(([phase, name]) => (
-              <div
-                key={phase}
-                className="flex items-center gap-2 rounded-lg border border-ink-600 bg-ink-800 px-3 py-2"
+            {COMING_SOON.map((name) => (
+              <span
+                key={name}
+                className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-[13px] text-mist-300"
               >
-                <span className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-medium text-mist-500">
-                  {phase}
-                </span>
-                <span className="text-[13px] text-mist-300">{name}</span>
-              </div>
+                {name}
+              </span>
             ))}
           </div>
           <p className="mt-3 text-[13px] leading-relaxed text-mist-500">
-            These features use optional AI models. Download and manage them from{" "}
+            These use optional AI models you can add from{" "}
             <button
               onClick={() => setSection("settings")}
               className="text-forge-400 underline-offset-2 hover:underline"
             >
               Settings → AI models
             </button>
-            . Everything runs locally and offline; nothing is required for manual editing.
+            . Everything runs locally and offline — nothing is required for manual editing.
           </p>
         </div>
       </div>
@@ -159,16 +185,5 @@ function BackendPill({ status }: { status: string }) {
       <span className={`h-2 w-2 rounded-full ${s.c} ${status === "connecting" ? "animate-pulse" : ""}`} />
       {s.t}
     </span>
-  );
-}
-
-function Logo() {
-  return (
-    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-forge-400 to-forge-700 shadow-pop">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0a0b0d" strokeWidth="2">
-        <circle cx="12" cy="12" r="4.2" strokeLinecap="round" />
-        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" strokeLinecap="round" />
-      </svg>
-    </div>
   );
 }

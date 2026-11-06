@@ -1,7 +1,7 @@
-"""LumaForge local processing backend.
+"""Lumetta local processing backend.
 
 A FastAPI service that performs all image analysis and pixel processing for the
-LumaForge desktop app. It runs entirely on the user's machine; the Tauri shell
+Lumetta desktop app. It runs entirely on the user's machine; the Tauri shell
 launches it as a local sidecar and talks to it over HTTP on 127.0.0.1.
 
 Design principles

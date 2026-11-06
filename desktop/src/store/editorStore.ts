@@ -7,10 +7,12 @@ import {
   makeMask,
   neutralAdjustments,
   neutralGrade,
+  scaleLookFromNeutral,
 } from "../lib/adjustments";
 import {
   pickImageToImport,
   pickSavePath,
+  pickProjectOpenPath,
   pickFile,
   downloadBlob,
   isTauri,
@@ -20,6 +22,8 @@ import type {
   AdjustGroup,
   AutoEnhanceResult,
   AutoMode,
+  ColorMatchCard,
+  ColorMatchScene,
   ExportFormat,
   Grade,
   HardwareReport,
@@ -35,6 +39,7 @@ import type {
   PortraitAdjust,
   PortraitMode,
   RawParams,
+  RecentProject,
 } from "../types";
 
 export type Section = "home" | "editor" | "ai" | "presets" | "settings";
@@ -78,6 +83,16 @@ interface MaskPanelState {
   activeId: string | null;
 }
 
+interface ColorMatchState {
+  open: boolean;
+  loading: boolean;
+  error: string | null;
+  cards: ColorMatchCard[];
+  scene: ColorMatchScene | null;
+  activeCardId: string | null;
+  intensity: number;
+}
+
 interface EditorState {
   section: Section;
   backend: { status: BackendStatus; version?: string; error?: string };
@@ -108,6 +123,7 @@ interface EditorState {
   autoEnhance: AutoEnhanceState;
   portrait: PortraitState;
   maskPanel: MaskPanelState;
+  colorMatch: ColorMatchState;
   luts: LutInfo[];
   lutError: string | null;
   developing: boolean; // RAW re-decode in progress
@@ -116,6 +132,8 @@ interface EditorState {
   modelStorage: ModelStorage | null;
   modelsLoading: boolean;
   modelError: string | null;
+
+  recentProjects: RecentProject[];
 
   // --- actions ---
   setSection: (s: Section) => void;
@@ -130,6 +148,12 @@ interface EditorState {
   openPath: (path: string) => Promise<void>;
   rawDevelop: (params: RawParams) => Promise<void>;
   closeImage: () => void;
+
+  // projects (.lfp)
+  loadRecentProjects: () => Promise<void>;
+  saveProject: () => Promise<void>;
+  openProjectDialog: () => Promise<void>;
+  openProjectPath: (path: string) => Promise<void>;
 
   beginGesture: () => void;
   setAdjustment: (group: AdjustGroup, key: string, value: number) => void;
@@ -161,6 +185,13 @@ interface EditorState {
 
   // motion & lens effects (Phase 5)
   setMotionField: (field: keyof MotionAdjust, value: number | string) => void;
+
+  // AI Color Match (Phase 7)
+  openColorMatch: () => Promise<void>;
+  selectColorMatchCard: (id: string) => void;
+  setColorMatchIntensity: (v: number) => void;
+  applyColorMatch: () => void;
+  cancelColorMatch: () => void;
 
   // color grading (Phase 2b)
   setGradeLive: (grade: Grade) => void;
@@ -214,6 +245,29 @@ let gestureSnapshot: Adjustments | null = null;
 // Auto Enhance: full-strength profiles per mode, cached per image so the
 // strength slider can interpolate instantly without re-hitting the backend.
 let autoProfiles: Partial<Record<AutoMode, AutoEnhanceResult>> = {};
+
+// Color Match: the adjustments at panel-open time, so a chosen look replaces the
+// base look (light/color/detail/effects/grade) while preserving the user's
+// portrait / masks / motion.
+let colorMatchBase: Adjustments | null = null;
+
+function applyColorCard(
+  get: () => EditorState,
+  set: (p: Partial<EditorState>) => void,
+  card: ColorMatchCard,
+  intensity: number,
+) {
+  const base = colorMatchBase ?? get().adjustments;
+  const scaled = scaleLookFromNeutral(card.adjustments, Math.max(0, Math.min(1, intensity / 100)));
+  const next = cloneAdjustments(base);
+  next.light = scaled.light;
+  next.color = scaled.color;
+  next.detail = scaled.detail;
+  next.effects = scaled.effects;
+  next.grade = scaled.grade;
+  set({ adjustments: next });
+  scheduleRender(get, set, 0);
+}
 
 async function applyAuto(
   get: () => EditorState,
@@ -271,6 +325,7 @@ function loadMeta(
   if (oldPreview) URL.revokeObjectURL(oldPreview);
   autoProfiles = {};
   gestureSnapshot = null;
+  colorMatchBase = null;
   set({
     image: meta,
     adjustments: neutralAdjustments(),
@@ -304,6 +359,10 @@ function loadMeta(
       message: null,
     },
     maskPanel: { open: false, activeId: null },
+    colorMatch: {
+      open: false, loading: false, error: null, cards: [], scene: null,
+      activeCardId: null, intensity: 100,
+    },
   });
   scheduleRender(get, set, 0);
   api.analyze(meta.id).then((a) => set({ analysis: a })).catch(() => {});
@@ -382,6 +441,10 @@ export const useEditor = create<EditorState>((set, get) => ({
     message: null,
   },
   maskPanel: { open: false, activeId: null },
+  colorMatch: {
+    open: false, loading: false, error: null, cards: [], scene: null,
+    activeCardId: null, intensity: 100,
+  },
   luts: [],
   lutError: null,
   developing: false,
@@ -390,6 +453,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   modelStorage: null,
   modelsLoading: false,
   modelError: null,
+
+  recentProjects: [],
 
   setSection: (s) => set({ section: s }),
 
@@ -400,6 +465,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       set({ backend: { status: "online", version: h.version } });
       void get().loadHardware();
       void get().loadLuts();
+      void get().loadRecentProjects();
     } catch (e) {
       set({
         backend: {
@@ -510,9 +576,94 @@ export const useEditor = create<EditorState>((set, get) => ({
     }
   },
 
+  // ---- projects (.lfp) ----
+  loadRecentProjects: async () => {
+    try {
+      set({ recentProjects: await api.recentProjects() });
+    } catch {
+      /* non-fatal */
+    }
+  },
+
+  saveProject: async () => {
+    const { image, adjustments } = get();
+    if (!image) return;
+    const base = image.filename.replace(/\.[^.]+$/, "") || "project";
+    set({ exportState: { state: "exporting" } });
+    try {
+      if (isTauri()) {
+        const path = await pickSavePath(`${base}.lfp`, "lfp");
+        if (!path) {
+          set({ exportState: { state: "idle" } });
+          return;
+        }
+        const proj = await api.saveProject({
+          path,
+          name: base,
+          source_path: image.source_path,
+          original_width: image.width,
+          original_height: image.height,
+          adjustments,
+        });
+        set({ exportState: { state: "done", message: `Saved project → ${proj.name}.lfp` } });
+        void get().loadRecentProjects();
+      } else {
+        // Browser: no server path — hand the user the .lfp JSON to download.
+        const now = new Date().toISOString();
+        const proj = {
+          schema_version: 1,
+          app_version: get().backend.version ?? "0.1.0",
+          name: base,
+          source_path: image.source_path,
+          original_width: image.width,
+          original_height: image.height,
+          adjustments,
+          created_at: now,
+          modified_at: now,
+        };
+        downloadBlob(
+          new Blob([JSON.stringify(proj, null, 2)], { type: "application/json" }),
+          `${base}.lfp`,
+        );
+        set({ exportState: { state: "done", message: `Downloaded ${base}.lfp` } });
+      }
+    } catch (e) {
+      set({
+        exportState: { state: "error", message: e instanceof ApiError ? e.message : "Save failed" },
+      });
+    }
+  },
+
+  openProjectDialog: async () => {
+    const path = await pickProjectOpenPath();
+    if (path) await get().openProjectPath(path);
+  },
+
+  openProjectPath: async (path) => {
+    set({ importing: true, importError: null });
+    try {
+      const proj = await api.openProject(path);
+      if (!proj.source_path) {
+        throw new ApiError(400, "This project has no linked source image to reopen.");
+      }
+      const meta = await api.importPath(proj.source_path);
+      loadMeta(get, set, meta);
+      // loadMeta resets to neutral; apply the saved look as the current edit.
+      get().applyAdjustments(proj.adjustments);
+      void get().loadRecentProjects();
+    } catch (e) {
+      set({
+        importing: false,
+        importError: e instanceof ApiError ? e.message : "Could not open project",
+      });
+    }
+  },
+
   closeImage: () => {
     const prev = get().previewUrl;
     if (prev) URL.revokeObjectURL(prev);
+    const id = get().image?.id;
+    if (id) void api.deleteImage(id); // free the backend session promptly
     set({
       image: null,
       previewUrl: null,
@@ -733,6 +884,70 @@ export const useEditor = create<EditorState>((set, get) => ({
     scheduleRender(get, set, field === "type" ? 0 : 110);
   },
 
+  // ---- AI Color Match (Phase 7) ----
+  openColorMatch: async () => {
+    const { image } = get();
+    if (!image) return;
+    get().beginGesture(); // whole Color Match session = one undo step
+    colorMatchBase = cloneAdjustments(get().adjustments);
+    set({
+      section: "editor",
+      colorMatch: {
+        open: true, loading: true, error: null, cards: [], scene: null,
+        activeCardId: null, intensity: 100,
+      },
+    });
+    try {
+      const res = await api.colorMatch(image.id);
+      if (!get().colorMatch.open) return; // closed while fetching
+      const first = res.cards[0];
+      set({
+        colorMatch: {
+          ...get().colorMatch,
+          loading: false,
+          cards: res.cards,
+          scene: res.scene,
+          activeCardId: first?.id ?? null,
+        },
+      });
+      if (first) applyColorCard(get, set, first, 100);
+    } catch (e) {
+      set({
+        colorMatch: {
+          ...get().colorMatch,
+          loading: false,
+          error: e instanceof ApiError ? e.message : "Color Match failed",
+        },
+      });
+    }
+  },
+
+  selectColorMatchCard: (id) => {
+    const card = get().colorMatch.cards.find((c) => c.id === id);
+    if (!card) return;
+    set({ colorMatch: { ...get().colorMatch, activeCardId: id } });
+    applyColorCard(get, set, card, get().colorMatch.intensity);
+  },
+
+  setColorMatchIntensity: (v) => {
+    set({ colorMatch: { ...get().colorMatch, intensity: v } });
+    const { cards, activeCardId } = get().colorMatch;
+    const card = cards.find((c) => c.id === activeCardId);
+    if (card) applyColorCard(get, set, card, v);
+  },
+
+  applyColorMatch: () => {
+    get().endGesture();
+    colorMatchBase = null;
+    set({ colorMatch: { ...get().colorMatch, open: false } });
+  },
+
+  cancelColorMatch: () => {
+    get().cancelGesture();
+    colorMatchBase = null;
+    set({ colorMatch: { ...get().colorMatch, open: false } });
+  },
+
   setGradeLive: (grade) => {
     set({ adjustments: { ...get().adjustments, grade } });
     scheduleRender(get, set);
@@ -787,7 +1002,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ exportState: { state: "exporting" } });
     try {
       if (isTauri()) {
-        const path = await pickSavePath("lumaforge.cube", "cube");
+        const path = await pickSavePath("lumetta.cube", "cube");
         if (!path) {
           set({ exportState: { state: "idle" } });
           return;
@@ -796,8 +1011,8 @@ export const useEditor = create<EditorState>((set, get) => ({
         set({ exportState: { state: "done", message: `Saved LUT → ${res.path}` } });
       } else {
         const blob = await api.exportLutBytes(image.id, adjustments);
-        downloadBlob(blob, "lumaforge.cube");
-        set({ exportState: { state: "done", message: "Downloaded lumaforge.cube" } });
+        downloadBlob(blob, "lumetta.cube");
+        set({ exportState: { state: "done", message: "Downloaded lumetta.cube" } });
       }
     } catch (e) {
       set({
@@ -852,7 +1067,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (!image) return;
     set({ exportState: { state: "exporting" } });
     try {
-      const baseName = (image.filename.replace(/\.[^.]+$/, "") || "image") + "_lumaforge";
+      const baseName = (image.filename.replace(/\.[^.]+$/, "") || "image") + "_lumetta";
       if (isTauri()) {
         const path = await pickSavePath(`${baseName}.${format}`, format);
         if (!path) {

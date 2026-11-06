@@ -1,6 +1,6 @@
-"""Runtime configuration for the LumaForge backend.
+"""Runtime configuration for the Lumetta backend.
 
-Values can be overridden with ``LUMAFORGE_*`` environment variables, which is
+Values can be overridden with ``LUMETTA_*`` environment variables, which is
 how the Tauri shell passes a chosen port / data directory to the sidecar.
 """
 from __future__ import annotations
@@ -15,20 +15,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def _default_data_dir() -> Path:
     """Per-user data directory for models, cache and projects."""
-    env = os.environ.get("LUMAFORGE_DATA_DIR")
+    env = os.environ.get("LUMETTA_DATA_DIR")
     if env:
         return Path(env)
     home = Path.home()
     if os.name == "nt":  # Windows
         base = Path(os.environ.get("APPDATA", home / "AppData" / "Roaming"))
-        return base / "LumaForge"
+        return base / "Lumetta"
     if os.sys.platform == "darwin":  # macOS
-        return home / "Library" / "Application Support" / "LumaForge"
-    return Path(os.environ.get("XDG_DATA_HOME", home / ".local" / "share")) / "LumaForge"
+        return home / "Library" / "Application Support" / "Lumetta"
+    return Path(os.environ.get("XDG_DATA_HOME", home / ".local" / "share")) / "Lumetta"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="LUMAFORGE_", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="LUMETTA_", extra="ignore")
 
     host: str = "127.0.0.1"
     port: int = 8756

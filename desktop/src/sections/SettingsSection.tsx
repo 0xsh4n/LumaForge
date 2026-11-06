@@ -125,7 +125,7 @@ export default function SettingsSection() {
 
         <Card title="About">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-mist-300">LumaForge</span>
+            <span className="text-mist-300">Lumetta</span>
             <span className="font-mono text-mist-500">
               v{backend.version ?? "—"} · backend {backend.status}
             </span>
@@ -193,7 +193,17 @@ function VramBar({ total, used }: { total: number; used: number }) {
   );
 }
 
-// ---- Model Manager (Phase 7 §25) ------------------------------------------
+// ---- Model Manager --------------------------------------------------------
+
+// Human category labels for the model groups (keyed by the registry phase,
+// which only drives ordering — the number is never surfaced to users).
+const MODEL_CATEGORY: Record<number, string> = {
+  3: "Face detection",
+  4: "Masking & segmentation",
+  5: "Depth & bokeh",
+  6: "Upscaling & restoration",
+  7: "Restoration & assistant",
+};
 
 function ModelManager() {
   const models = useEditor((s) => s.models);
@@ -203,15 +213,19 @@ function ModelManager() {
   const download = useEditor((s) => s.downloadModel);
   const remove = useEditor((s) => s.removeModel);
 
-  const phases = Array.from(new Set(models.map((m) => m.phase))).sort((a, b) => a - b);
+  // Group models by a human category (ordered by the registry's phase field,
+  // but the number is never shown).
+  const groups = Array.from(new Set(models.map((m) => m.phase)))
+    .sort((a, b) => a - b)
+    .map((phase) => ({ phase, label: MODEL_CATEGORY[phase] ?? "Other models" }));
 
   return (
     <Card title="AI models">
       <p className="text-sm text-mist-500">
-        The AI features in phases 4–7 (masking, depth &amp; bokeh, upscaling, face
-        restoration and the optional Luma Assistant) use the models below. They are
-        optional and downloaded on demand from their official sources — none are needed
-        for manual editing, Auto Enhance, color grading or RAW development.
+        Lumetta's AI extras — masking, depth &amp; bokeh, upscaling, face restoration and
+        the optional Lumetta Assistant — use the models below. They are optional and
+        downloaded on demand from their official sources; none are needed for manual
+        editing, Auto Enhance, Color Match, color grading or RAW development.
       </p>
 
       {storage && (
@@ -242,10 +256,10 @@ function ModelManager() {
         <p className="mt-3 text-sm text-mist-500">Loading models…</p>
       ) : (
         <div className="mt-4 space-y-5">
-          {phases.map((phase) => (
+          {groups.map(({ phase, label }) => (
             <div key={phase}>
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-mist-500">
-                Phase {phase}
+                {label}
               </div>
               <div className="space-y-2">
                 {models

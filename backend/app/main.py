@@ -1,4 +1,4 @@
-"""LumaForge backend application factory and entry point.
+"""Lumetta backend application factory and entry point.
 
 Run directly for development::
 
@@ -20,9 +20,9 @@ from .routers import enhance, grade, images, models, portrait, process, projects
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="LumaForge Backend",
+        title="Lumetta Backend",
         version=__version__,
-        description="Local, offline image-processing service for LumaForge.",
+        description="Local, offline image-processing service for Lumetta.",
     )
 
     # The webview (Tauri or the Vite dev server) runs on a different origin.
@@ -48,7 +48,7 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     def root() -> dict:
-        return {"app": "LumaForge", "version": __version__, "status": "ok"}
+        return {"app": "Lumetta", "version": __version__, "status": "ok"}
 
     return app
 
@@ -60,7 +60,7 @@ def main() -> None:
     import uvicorn
 
     settings = get_settings()
-    parser = argparse.ArgumentParser(description="LumaForge backend")
+    parser = argparse.ArgumentParser(description="Lumetta backend")
     parser.add_argument("--host", default=settings.host)
     parser.add_argument("--port", type=int, default=settings.port)
     parser.add_argument("--reload", action="store_true")

@@ -12,7 +12,7 @@ from app.main import app
 @pytest.fixture
 def tmp_models(tmp_path, monkeypatch):
     """Redirect the per-user data dir to a temp folder for a test."""
-    monkeypatch.setenv("LUMAFORGE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("LUMETTA_DATA_DIR", str(tmp_path))
     get_settings.cache_clear()
     get_settings()  # create the dirs under tmp_path
     yield tmp_path / "models"

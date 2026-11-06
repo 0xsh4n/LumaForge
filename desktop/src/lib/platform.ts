@@ -63,6 +63,20 @@ export async function pickSavePath(
   return null;
 }
 
+/** Choose a .lfp project file to open (Tauri). Returns null in the browser. */
+export async function pickProjectOpenPath(): Promise<string | null> {
+  if (isTauri()) {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      multiple: false,
+      directory: false,
+      filters: [{ name: "Lumetta Project", extensions: ["lfp"] }],
+    });
+    return typeof selected === "string" ? selected : null;
+  }
+  return null;
+}
+
 /** Pick a single file matching an accept list (uses the webview file input,
  *  which works in both Tauri and the browser). */
 export function pickFile(accept: string): Promise<File | null> {

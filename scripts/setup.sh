@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup for LumaForge (Linux / macOS).
+# One-time setup for Lumetta (Linux / macOS).
 # Creates the Python venv, installs backend deps, and installs frontend deps.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -26,7 +26,7 @@ desktop/.vite/
 desktop/src-tauri/target/
 desktop/src-tauri/gen/
 
-# ---- LumaForge runtime ----
+# ---- Lumetta runtime ----
 models/*/           # downloaded AI model weights (managed at runtime)
 !models/.gitkeep
 cache/

@@ -1,7 +1,7 @@
-# PyInstaller spec for the LumaForge backend sidecar.
+# PyInstaller spec for the Lumetta backend sidecar.
 #
-# Build:  pyinstaller lumaforge-backend.spec --noconfirm
-# Output: dist/lumaforge-backend  (a single self-contained executable)
+# Build:  pyinstaller lumetta-backend.spec --noconfirm
+# Output: dist/lumetta-backend  (a single self-contained executable)
 #
 # The onefile executable is then renamed to the Rust target triple and copied
 # into desktop/src-tauri/binaries/ by scripts/build_sidecar.(sh|ps1).
@@ -66,7 +66,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="lumaforge-backend",
+    name="lumetta-backend",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

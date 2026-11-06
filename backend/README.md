@@ -1,6 +1,6 @@
-# LumaForge Backend
+# Lumetta Backend
 
-Local image-processing engine for LumaForge — a FastAPI service that performs all
+Local image-processing engine for Lumetta — a FastAPI service that performs all
 analysis and pixel processing. It runs on `127.0.0.1` and is launched by the
 Tauri shell as a bundled sidecar (or standalone with `uvicorn` in development).
 
@@ -43,7 +43,7 @@ and the HTTP API (import → render → export), not mocks.
 
 ```
 app/
-├── config.py        settings (env: LUMAFORGE_*)
+├── config.py        settings (env: LUMETTA_*)
 ├── schemas.py       Adjustments + request/response models
 ├── store.py         in-memory non-destructive image sessions (LRU)
 ├── imaging/
@@ -58,7 +58,7 @@ app/
 
 ## Packaging
 
-`lumaforge-backend.spec` + `../scripts/build_sidecar.*` freeze this into a single
+`lumetta-backend.spec` + `../scripts/build_sidecar.*` freeze this into a single
 executable for the Tauri sidecar. Build on each target OS.
 
 ## Dependencies

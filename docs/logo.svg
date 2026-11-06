@@ -1,0 +1,22 @@
+<svg width="320" height="88" viewBox="0 0 320 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="forge" x1="12" y1="12" x2="76" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffb559"/>
+      <stop offset="1" stop-color="#b8690a"/>
+    </linearGradient>
+  </defs>
+  <!-- brand tile -->
+  <rect x="12" y="12" width="64" height="64" rx="17" fill="url(#forge)"/>
+  <!-- lens ring + captured light spark -->
+  <g transform="translate(44,44) scale(1.55)" stroke="#07080a" stroke-width="2"
+     stroke-linejoin="round" stroke-linecap="round" fill="none">
+    <circle cx="0" cy="0" r="8.4"/>
+    <path d="M0 -5.4 L1.5 -1.5 L5.4 0 L1.5 1.5 L0 5.4 L-1.5 1.5 L-5.4 0 L-1.5 -1.5 Z"
+          fill="#07080a" stroke="none"/>
+  </g>
+  <!-- wordmark -->
+  <text x="94" y="55" font-family="Inter, system-ui, sans-serif" font-size="34"
+        font-weight="600" letter-spacing="-0.5">
+    <tspan fill="#f4f6fa">Lum</tspan><tspan fill="#f59e2c">etta</tspan>
+  </text>
+</svg>

@@ -350,6 +350,21 @@ class AutoEnhanceResult(BaseModel):
     scene: dict
 
 
+class ColorMatchCard(BaseModel):
+    """One editable grading recommendation (AI Color Match, §23)."""
+
+    id: str
+    title: str
+    description: str
+    accent: str                 # hex colour for the UI chip
+    adjustments: Adjustments
+
+
+class ColorMatchResult(BaseModel):
+    scene: dict
+    cards: list[ColorMatchCard]
+
+
 class ProjectFile(BaseModel):
     """On-disk project (.lfp) — original reference + parameters only."""
 

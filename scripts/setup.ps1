@@ -1,4 +1,4 @@
-# One-time setup for LumaForge (Windows PowerShell).
+# One-time setup for Lumetta (Windows PowerShell).
 # Creates the Python venv, installs backend deps, and installs frontend deps.
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot

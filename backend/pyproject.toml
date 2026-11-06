@@ -1,7 +1,7 @@
 [project]
-name = "lumaforge-backend"
+name = "lumetta-backend"
 version = "0.1.0"
-description = "Local image-processing backend for the LumaForge desktop app"
+description = "Local image-processing backend for the Lumetta desktop app"
 requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
@@ -20,7 +20,7 @@ formats = ["pillow-heif>=0.16", "rawpy>=0.19"]
 dev = ["pytest>=8", "httpx>=0.27"]
 
 [project.scripts]
-lumaforge-backend = "app.main:main"
+lumetta-backend = "app.main:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

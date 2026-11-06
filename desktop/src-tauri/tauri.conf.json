@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "LumaForge",
+  "productName": "Lumetta",
   "version": "0.1.0",
-  "identifier": "com.lumaforge.app",
+  "identifier": "com.lumetta.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "LumaForge",
+        "title": "Lumetta",
         "label": "main",
         "width": 1320,
         "height": 860,
@@ -38,9 +38,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/lumaforge-backend"],
+    "externalBin": ["binaries/lumetta-backend"],
     "resources": [],
-    "copyright": "© LumaForge",
+    "copyright": "© Lumetta",
     "category": "Photography",
     "shortDescription": "AI photo enhancement & DSLR conversion studio",
     "longDescription": "Transform ordinary photographs into professionally processed, DSLR-style images using local AI models and classical image processing. Runs fully offline.",

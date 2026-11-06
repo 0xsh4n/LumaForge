@@ -1,5 +1,6 @@
 import { useEditor } from "../store/editorStore";
 import type { Section } from "../store/editorStore";
+import Logo from "./Logo";
 import {
   IconHome,
   IconSliders,
@@ -22,11 +23,8 @@ export default function NavRail() {
 
   return (
     <nav className="flex w-16 shrink-0 flex-col items-center border-r border-ink-600 bg-ink-850 py-3">
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-forge-400 to-forge-700">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0b0d" strokeWidth="2.2">
-          <circle cx="12" cy="12" r="4" strokeLinecap="round" />
-          <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" strokeLinecap="round" />
-        </svg>
+      <div className="mb-4">
+        <Logo size={40} />
       </div>
       <div className="flex flex-1 flex-col gap-1">
         {ITEMS.map((item) => {

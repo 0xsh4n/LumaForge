@@ -1,9 +1,9 @@
 {
-  "name": "lumaforge",
+  "name": "lumetta",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "LumaForge — AI-powered photo enhancement & DSLR conversion studio",
+  "description": "Lumetta — AI-powered photo enhancement & DSLR conversion studio",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

@@ -86,11 +86,11 @@ def test_background_ops_only_affect_background():
 
 # ----------------------------- detection ---------------------------------
 
-FACE_SAMPLE = os.environ.get("LUMAFORGE_TEST_FACE")
+FACE_SAMPLE = os.environ.get("LUMETTA_TEST_FACE")
 
 
 @pytest.mark.skipif(not FACE_SAMPLE or not os.path.exists(FACE_SAMPLE),
-                    reason="no sample face image (set LUMAFORGE_TEST_FACE)")
+                    reason="no sample face image (set LUMETTA_TEST_FACE)")
 def test_face_detection_and_masks():
     from app.imaging import face as facemod
     from app.imaging import io as imgio

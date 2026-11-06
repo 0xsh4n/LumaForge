@@ -147,7 +147,7 @@ jobs:
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
-          name: lumaforge-${{ matrix.name }}
+          name: lumetta-${{ matrix.name }}
           path: ${{ matrix.bundles }}
           if-no-files-found: error
           retention-days: 7

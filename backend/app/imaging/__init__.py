@@ -1,4 +1,4 @@
-"""Image processing primitives for LumaForge.
+"""Image processing primitives for Lumetta.
 
 All processing operates on float32 RGB arrays in the range [0, 1]. Pixels are
 display-referred (sRGB-encoded) unless a function explicitly says it works in

@@ -243,7 +243,7 @@ def parse_cube(text: str) -> dict:
     return {"dim": 3, "size": size, "data": np.ascontiguousarray(table)}
 
 
-def write_cube(samples: np.ndarray, size: int, title: str = "LumaForge") -> str:
+def write_cube(samples: np.ndarray, size: int, title: str = "Lumetta") -> str:
     """Serialize an (size^3, 3) graded-lattice array to .cube text (red fastest)."""
     lines = [f'TITLE "{title}"', f"LUT_3D_SIZE {size}", ""]
     for row in samples:

@@ -1,14 +1,14 @@
 # GPU & Performance
 
 **Target hardware:** an NVIDIA GTX 1650 (≈4 GB VRAM) laptop, 8 GB RAM,
-Windows 10/11. LumaForge is tuned not to require anything more.
+Windows 10/11. Lumetta is tuned not to require anything more.
 
-## Phase 1 (now): CPU processing
+## Today: CPU processing
 
-All manual adjustments, analysis and export in Phase 1 run on the **CPU** using
+All manual adjustments, analysis and export run on the **CPU** using
 NumPy and OpenCV (OpenCV uses all cores for blurs/resampling). There is no GPU
 requirement yet. The Settings → *Hardware compatibility* panel states this
-plainly — LumaForge never implies GPU work that isn't happening.
+plainly — Lumetta never implies GPU work that isn't happening.
 
 Responsiveness is maintained by:
 
@@ -17,7 +17,7 @@ Responsiveness is maintained by:
 - a debounced, stale-dropping render loop,
 - full resolution used only on export.
 
-## Later phases: GPU-accelerated AI
+## Optional AI: GPU acceleration
 
 AI features (upscaling, face restoration, segmentation, depth, color reasoning)
 use the GPU through **ONNX Runtime (CUDA EP)** and/or **PyTorch** when available,
@@ -26,7 +26,7 @@ with CPU fallback. The compatibility report detects:
 - NVIDIA GPU name, driver, and **live VRAM** (via `nvidia-smi`),
 - whether a CUDA-capable runtime (torch / onnxruntime) is installed.
 
-### GPU resource scheduler (planned — see ROADMAP §26)
+### GPU resource scheduler (planned — see the [Roadmap](ROADMAP.md))
 
 Because 4 GB VRAM is small, a shared scheduler will:
 

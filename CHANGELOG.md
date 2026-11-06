@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to LumaForge are documented here. Dates are ISO-8601.
+All notable changes to Lumetta are documented here. Dates are ISO-8601.
 Versioning will follow semver once 1.0 ships.
 
 ## [Unreleased]
@@ -43,6 +43,31 @@ Versioning will follow semver once 1.0 ships.
   facial exposure, face sharpening & noise reduction, hair enhancement,
   background exposure/saturation. No geometry change, no generative faces.
 - 10 editable Portrait Studio modes + intensity & naturalness.
+
+### Changed — Rebrand to Lumetta
+- Renamed the product **LumaForge → Lumetta** across the app, docs, Tauri config
+  (`com.lumetta.app`, productName), Rust crate, PyInstaller sidecar
+  (`lumetta-backend`), env prefix (`LUMETTA_*`) and per-user data dir. New brand
+  mark (a camera-lens ring capturing a light spark) as a shared `Logo` component
+  and a regenerated app icon set (`docs/logo.svg`).
+
+### Added — Project files (.lfp) in the UI
+- Wired the existing backend project persistence into the frontend: **Save /
+  Open project** in the editor header and a **Recent projects** list on Home.
+  Projects store only the source reference + adjustments (never pixels); opening
+  one re-imports the original and restores the full edit. Closing an image now
+  frees its backend session. (Closes a backend↔frontend parity gap.)
+
+### Added — Phase 7: AI Color Match (classical)
+- Analyzes each photo (brightness, colour cast, saturation, mood, skin presence)
+  and proposes six **editable grading looks** — Natural Balance, Warm Cinematic,
+  Cool Editorial, Vibrant Pop, Golden Warmth, Mono Contrast — each adapted to the
+  image and returned as a full `Adjustments` the pipeline renders. **Skin tones
+  are protected** (saturation/warmth tempered when the frame has significant skin).
+- An **Intensity** control blends the look toward neutral (grade-aware), and the
+  user's existing portrait/masks/motion are preserved. `backend/app/imaging/
+  colormatch.py` + editor Color Match panel. 5 dedicated tests. A local VLM can
+  later add bespoke cards (see codex.txt) — works fully with no model.
 
 ### Added — Phase 4: Masking engine (classical)
 - Non-destructive **mask layers** — Linear & Radial gradients and a brush model —

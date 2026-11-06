@@ -18,7 +18,7 @@ export default function PresetsSection() {
       <div className="mx-auto max-w-4xl px-8 py-10">
         <h1 className="text-2xl font-semibold text-mist-100">Presets</h1>
         <p className="mt-1 max-w-2xl text-sm text-mist-500">
-          One-click looks built entirely from LumaForge's manual adjustments. Applying a
+          One-click looks built entirely from Lumetta's manual adjustments. Applying a
           preset loads its values into the editor, where you can inspect and fine-tune
           every slider — nothing is hidden or baked in.
         </p>

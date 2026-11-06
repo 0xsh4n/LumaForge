@@ -1,8 +1,9 @@
-// Thin typed client for the local LumaForge backend.
+// Thin typed client for the local Lumetta backend.
 import type {
   Adjustments,
   AutoEnhanceResult,
   AutoMode,
+  ColorMatchResult,
   ExportFormat,
   ExportResult,
   HardwareReport,
@@ -12,12 +13,14 @@ import type {
   ModelInfo,
   ModelListResponse,
   PortraitMode,
+  ProjectFile,
   RawParams,
+  RecentProject,
 } from "../types";
 
 const API_BASE: string =
-  (import.meta as any).env?.VITE_LUMAFORGE_API ||
-  (typeof window !== "undefined" && (window as any).__LUMAFORGE_API__) ||
+  (import.meta as any).env?.VITE_LUMETTA_API ||
+  (typeof window !== "undefined" && (window as any).__LUMETTA_API__) ||
   "http://127.0.0.1:8756";
 
 export class ApiError extends Error {
@@ -194,6 +197,10 @@ export const api = {
     });
   },
 
+  async colorMatch(id: string): Promise<ColorMatchResult> {
+    return jsonFetch(`/api/images/${id}/color-match`, { method: "POST" });
+  },
+
   // ---- Color grading / LUTs (Phase 2b) ----
   async listLuts(): Promise<LutInfo[]> {
     return jsonFetch("/api/luts");
@@ -239,8 +246,33 @@ export const api = {
     });
   },
 
-  async recentProjects(): Promise<{ path: string; name: string; opened_at: string }[]> {
+  // ---- Projects (.lfp save / open / recent) ----
+  async recentProjects(): Promise<RecentProject[]> {
     return jsonFetch("/api/projects/recent");
+  },
+
+  async saveProject(req: {
+    path: string;
+    name: string;
+    source_path: string | null;
+    original_width: number;
+    original_height: number;
+    adjustments: Adjustments;
+    created_at?: string;
+  }): Promise<ProjectFile> {
+    return jsonFetch("/api/projects/save", { method: "POST", body: JSON.stringify(req) });
+  },
+
+  async openProject(path: string): Promise<ProjectFile> {
+    return jsonFetch("/api/projects/open", { method: "POST", body: JSON.stringify({ path }) });
+  },
+
+  async deleteImage(id: string): Promise<void> {
+    try {
+      await jsonFetch(`/api/images/${id}`, { method: "DELETE" });
+    } catch {
+      /* best-effort: backend also LRU-evicts */
+    }
   },
 
   // ---- Model Manager (Phase 7 §25) ----

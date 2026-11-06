@@ -1,4 +1,4 @@
-# Start LumaForge in development (Windows PowerShell).
+# Start Lumetta in development (Windows PowerShell).
 #
 #   .\scripts\dev.ps1            backend + native Tauri window (WebView2)
 #   .\scripts\dev.ps1 -Browser   backend + Vite dev server at http://127.0.0.1:1420

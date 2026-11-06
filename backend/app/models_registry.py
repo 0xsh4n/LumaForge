@@ -1,4 +1,4 @@
-"""Central registry of the optional AI models used by LumaForge.
+"""Central registry of the optional AI models used by Lumetta.
 
 Everything the app can download lives here, in one place, so the backend, the
 Settings → Model Manager UI and the documentation all describe the *same* set of
@@ -10,7 +10,7 @@ Design rules
   host (the model author's GitHub release, their Hugging Face repo, the OpenCV
   Zoo, or Google's MediaPipe CDN). :func:`is_safe_url` enforces this allowlist,
   and the test suite asserts it for every entry.
-* **Optional & on-demand.** No model is required to run LumaForge. The manual
+* **Optional & on-demand.** No model is required to run Lumetta. The manual
   editing engine, Auto Enhance, color grading and RAW development are fully
   classical and ship with the app. Models only unlock the AI-assisted features
   of phases 4–7, and are fetched (or removed) by the user when they want them.
@@ -211,7 +211,7 @@ _MODELS: tuple[ModelSpec, ...] = (
         id="moondream2",
         name="Moondream 2 (VLM)",
         phase=7,
-        feature="Optional local vision-language model for AI Color Match & Luma Assistant.",
+        feature="Optional local vision-language model for AI Color Match & Lumetta Assistant.",
         filename="moondream2",  # pulled via Ollama; informational
         url=None,
         source_page="https://huggingface.co/vikhyatk/moondream2",
