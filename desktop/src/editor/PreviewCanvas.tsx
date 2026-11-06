@@ -16,11 +16,18 @@ export default function PreviewCanvas() {
   const fitToScreen = useEditor((s) => s.fitToScreen);
   const setZoom = useEditor((s) => s.setZoom);
   const importImage = useEditor((s) => s.importImage);
+  const maskPanel = useEditor((s) => s.maskPanel);
+  const masks = useEditor((s) => s.adjustments.masks);
+  const beginGesture = useEditor((s) => s.beginGesture);
+  const endGesture = useEditor((s) => s.endGesture);
+  const addBrushDab = useEditor((s) => s.addBrushDab);
+  const brush = maskPanel.brush;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragging = useRef<null | { kind: "pan" | "split"; sx: number; sy: number; ox: number; oy: number }>(null);
+  const brushStroke = useRef<null | { id: string; lastX: number; lastY: number }>(null);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -72,10 +79,30 @@ export default function PreviewCanvas() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (compare === "split") return;
+    const activeMask = masks.find((m) => m.id === maskPanel.activeId);
+    if (maskPanel.open && activeMask?.type === "brush") {
+      const imageBox = (e.currentTarget as HTMLElement).querySelector("[data-canvas-image]")?.getBoundingClientRect();
+      if (!imageBox || e.clientX < imageBox.left || e.clientX > imageBox.right || e.clientY < imageBox.top || e.clientY > imageBox.bottom) return;
+      e.preventDefault();
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      beginGesture();
+      brushStroke.current = { id: activeMask.id, lastX: e.clientX, lastY: e.clientY };
+      addBrushDab(activeMask.id, { x: (e.clientX - imageBox.left) / imageBox.width, y: (e.clientY - imageBox.top) / imageBox.height, radius: brush.radius, hardness: brush.hardness, erase: brush.erase });
+      return;
+    }
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     dragging.current = { kind: "pan", sx: e.clientX, sy: e.clientY, ox: pan.x, oy: pan.y };
   };
   const onPointerMove = (e: React.PointerEvent) => {
+    if (brushStroke.current) {
+      const imageBox = (e.currentTarget as HTMLElement).querySelector("[data-canvas-image]")?.getBoundingClientRect();
+      const stroke = brushStroke.current;
+      if (!imageBox) return;
+      if (Math.hypot(e.clientX - stroke.lastX, e.clientY - stroke.lastY) < 4) return;
+      stroke.lastX = e.clientX; stroke.lastY = e.clientY;
+      addBrushDab(stroke.id, { x: Math.min(1, Math.max(0, (e.clientX - imageBox.left) / imageBox.width)), y: Math.min(1, Math.max(0, (e.clientY - imageBox.top) / imageBox.height)), radius: brush.radius, hardness: brush.hardness, erase: brush.erase });
+      return;
+    }
     const d = dragging.current;
     if (!d) return;
     if (d.kind === "pan") {
@@ -84,6 +111,7 @@ export default function PreviewCanvas() {
   };
   const onPointerUp = (e: React.PointerEvent) => {
     (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    if (brushStroke.current) { brushStroke.current = null; endGesture(); return; }
     dragging.current = null;
   };
 
@@ -130,6 +158,7 @@ export default function PreviewCanvas() {
           style={{ cursor: compare === "split" ? "default" : "grab" }}
         >
           <div
+            data-canvas-image
             className="relative"
             style={{ width: dispW, height: dispH, transform: `translate(${pan.x}px, ${pan.y}px)` }}
           >
@@ -150,6 +179,12 @@ export default function PreviewCanvas() {
                 }}
               />
             )}
+
+            {maskPanel.open && (() => {
+              const selected = masks.find((m) => m.id === maskPanel.activeId);
+              if (!selected || selected.type !== "brush") return null;
+              return <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1 1" preserveAspectRatio="none">{selected.dabs.map((dab, i) => <circle key={i} cx={dab.x} cy={dab.y} r={dab.radius * Math.max(image.width, image.height) / image.width} fill={dab.erase ? "transparent" : "rgba(255,55,70,.18)"} stroke="rgba(255,55,70,.35)" strokeWidth=".002" />)}</svg>;
+            })()}
 
             {compare === "split" && (
               <SplitHandle

@@ -43,24 +43,24 @@ automatically on first use).
 - **Model manager** — browse, download and remove the optional AI models from
   trusted sources, with live progress and clear storage locations.
 
-## 🛠 Coming soon
+## Available now
 
 These build on the model manager that's already in place. They use optional
 on-device models you install from **Settings → AI models**, and each degrades
 gracefully when its model isn't present.
 
-- **AI subject, background & sky masks** — high-quality automatic selections to
-  drive local edits and separation.
-- **Depth & bokeh workspace** — a monocular depth map powering natural,
-  variable-strength background blur with aperture presets and a movable focus
-  point; halo-free around hair and glass.
-- **DSLR Look** — subject separation and lens-character rendering
-  (35 / 50 / 85 / 135 mm) for a true camera feel.
-- **AI upscaling & restoration** — 2×/4× enlargement and detail recovery with
-  VRAM-aware tiled inference and an explicit CPU fallback.
-- **Lumetta Assistant** *(optional, local)* — describe an edit in plain language
-  and get **structured, reviewable adjustments** you approve before they apply.
-  It never manipulates pixels directly, and the app works fully without it.
+- **AI subject, background & sky masks** — BiRefNet-powered selections that
+  drive the existing editable local adjustments.
+- **Depth & Bokeh** — Depth Anything V2 map with focus-distance and aperture
+  controls; the rendered blur remains an editable adjustment.
+- **Lumetta Assistant** — local rules-based suggestions for common requests,
+  shown for review before any adjustment is applied.
+- **Real-ESRGAN upscaling** — tiled 2×/4× enlargement runs as a cancellable AI
+  job and replaces the working source while preserving adjustment parameters.
+
+## In development
+
+- **DSLR Look** — additional lens-character rendering and focal-length presets.
 
 ## 🎯 Design principles
 

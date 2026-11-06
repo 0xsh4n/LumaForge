@@ -7,6 +7,8 @@ import AutoEnhancePanel from "../editor/AutoEnhancePanel";
 import PortraitPanel from "../editor/PortraitPanel";
 import MasksPanel from "../editor/MasksPanel";
 import ColorMatchPanel from "../editor/ColorMatchPanel";
+import DepthPanel from "../editor/DepthPanel";
+import AssistantPanel from "../editor/AssistantPanel";
 import { IconClose, IconExport, IconImport } from "../components/icons";
 
 export default function EditorSection() {
@@ -62,6 +64,8 @@ export default function EditorSection() {
             <PortraitPanel />
             <MasksPanel />
             <ColorMatchPanel />
+            <DepthPanel />
+            <AssistantPanel />
           </div>
         </div>
         <AdjustPanel />

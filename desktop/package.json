@@ -1,7 +1,7 @@
 {
   "name": "lumetta",
   "private": true,
-  "version": "0.1.0",
+  "version": "5.0.0",
   "type": "module",
   "description": "Lumetta — AI-powered photo enhancement & DSLR conversion studio",
   "scripts": {

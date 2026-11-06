@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor } from "../store/editorStore";
+import { api } from "../lib/api";
 import { isNeutral } from "../lib/adjustments";
 import type { ExportFormat } from "../types";
 import {
@@ -57,8 +58,27 @@ export default function BottomBar() {
   const zoom = useEditor((s) => s.zoom);
   const fitToScreen = useEditor((s) => s.fitToScreen);
   const setZoom = useEditor((s) => s.setZoom);
+  const refreshImageMeta = useEditor((s) => s.refreshImageMeta);
 
   const [exportOpen, setExportOpen] = useState(false);
+  const [activeJob, setActiveJob] = useState<{ id: string; state: string; progress: number; provider: string | null; message: string } | null>(null);
+  const handledJobs = useRef(new Set<string>());
+  useEffect(() => {
+    let mounted = true;
+    const poll = async () => {
+      try {
+        const result = await api.aiJobs();
+        if (mounted) {
+          const completed = result.jobs.filter((j) => j.state === "done" && !handledJobs.current.has(j.id));
+          if (completed.length) { completed.forEach((j) => handledJobs.current.add(j.id)); void refreshImageMeta(); }
+          setActiveJob(result.jobs.find((j) => j.state === "queued" || j.state === "running") ?? null);
+        }
+      } catch { /* backend may be starting */ }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 1200);
+    return () => { mounted = false; window.clearInterval(timer); };
+  }, [refreshImageMeta]);
 
   const z = fitToScreen ? 1 : zoom;
 
@@ -80,8 +100,9 @@ export default function BottomBar() {
         </span>
       </div>
 
-      {/* center: compare */}
+      {/* center: compare and AI task status */}
       <div className="flex items-center gap-1">
+        {activeJob && <div className="mr-2 flex items-center gap-2 rounded-md bg-ink-700 px-2 py-1 text-[11px] text-mist-300" title={activeJob.message}><span>AI {Math.round(activeJob.progress * 100)}% · {activeJob.provider?.startsWith("CUDA") ? "GPU" : activeJob.provider ? "CPU" : "Starting"}</span><button onClick={() => void api.cancelAiJob(activeJob.id)} className="text-mist-400 hover:text-ember" aria-label="Cancel AI task">Cancel</button></div>}
         <button
           title="Hold to view original"
           onPointerDown={() => setShowOriginal(true)}

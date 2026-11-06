@@ -66,6 +66,9 @@ const MASK_TYPE_NAME: Record<MaskType, string> = {
   linear: "Linear Gradient",
   radial: "Radial Gradient",
   brush: "Brush",
+  ai_subject: "Subject Mask",
+  ai_background: "Background Mask",
+  ai_sky: "Sky Mask",
 };
 
 /** Build a fresh mask of the given kind with sensible default geometry. */
@@ -109,6 +112,7 @@ export function neutralAdjustments(): Adjustments {
     portrait: neutralPortrait(),
     masks: [],
     motion: neutralMotion(),
+    depth: { enabled: false, focus: 0.5, aperture: 8, transition: 30, bokeh_shape: "round", subject_protect: 70, highlight_bloom: 0 },
   };
 }
 
@@ -140,6 +144,7 @@ export function lerpAdjustments(a: Adjustments, b: Adjustments, t: number): Adju
   // Masks and motion are not interpolated (Auto Enhance never sets them).
   out.masks = JSON.parse(JSON.stringify(b.masks));
   out.motion = JSON.parse(JSON.stringify(b.motion));
+  out.depth = JSON.parse(JSON.stringify(b.depth));
   return out;
 }
 

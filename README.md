@@ -42,9 +42,8 @@ no cloud, no accounts, no subscriptions.
 | **Universal import & export** | Open JPEG, PNG, WebP, BMP, TIFF, HEIC/HEIF and camera RAW; export full-resolution JPEG, PNG, WebP or 16-bit TIFF with sRGB profile and metadata. |
 | **Projects** | Save your work as a tiny `.lfp` file (a reference to the original plus your edits) and reopen it anytime. |
 
-> **Coming soon:** AI subject & sky masks, depth-based bokeh, AI upscaling &
-> restoration, and the optional on-device **Lumetta Assistant**. These use
-> optional models you add in **Settings → AI models**. See the [Roadmap](docs/ROADMAP.md).
+> **In development:** additional DSLR lens looks.
+> See the [Roadmap](docs/ROADMAP.md) for current capabilities.
 
 ## How it works
 

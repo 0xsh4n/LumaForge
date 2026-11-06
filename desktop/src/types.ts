@@ -149,12 +149,13 @@ export interface BrushDab {
   erase: boolean;
 }
 
-export type MaskType = "linear" | "radial" | "brush";
+export type MaskType = "linear" | "radial" | "brush" | "ai_subject" | "ai_background" | "ai_sky";
 
 export interface Mask {
   id: string;
   name: string;
   type: MaskType;
+  ai_model?: string | null;
   enabled: boolean;
   invert: boolean;
   opacity: number;
@@ -181,6 +182,23 @@ export interface MotionAdjust {
   cy: number;
 }
 
+export interface DepthAdjust {
+  enabled: boolean;
+  focus: number;
+  aperture: number;
+  transition: number;
+  bokeh_shape: "round" | "hex";
+  subject_protect: number;
+  highlight_bloom: number;
+}
+
+export interface AssistantSuggestion {
+  adjustments: Adjustments;
+  summary: string;
+  source: "vlm" | "rules";
+  notes: string[];
+}
+
 export interface Adjustments {
   light: LightAdjust;
   color: ColorAdjust;
@@ -190,6 +208,7 @@ export interface Adjustments {
   portrait: PortraitAdjust;
   masks: Mask[];
   motion: MotionAdjust;
+  depth: DepthAdjust;
 }
 
 export interface LutInfo {

@@ -1,0 +1,3 @@
+# Optional local inference runtime. CUDA users can install onnxruntime-gpu
+# matching their CUDA/cuDNN environment instead of onnxruntime.
+onnxruntime>=1.17

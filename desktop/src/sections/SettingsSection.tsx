@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useEditor } from "../store/editorStore";
 import type { PreviewQuality } from "../store/editorStore";
 import type { ModelInfo } from "../types";
 import { openExternal } from "../lib/platform";
+import { api } from "../lib/api";
 import { IconChip, IconCheck, IconAlert, IconExport, IconLayers } from "../components/icons";
 
 export default function SettingsSection() {
@@ -206,12 +207,26 @@ const MODEL_CATEGORY: Record<number, string> = {
 };
 
 function ModelManager() {
+  const [installingRuntime, setInstallingRuntime] = useState(false);
+  const [runtimeMessage, setRuntimeMessage] = useState<string | null>(null);
   const models = useEditor((s) => s.models);
   const storage = useEditor((s) => s.modelStorage);
   const loading = useEditor((s) => s.modelsLoading);
   const error = useEditor((s) => s.modelError);
   const download = useEditor((s) => s.downloadModel);
   const remove = useEditor((s) => s.removeModel);
+  const installAiRuntime = async () => {
+    setInstallingRuntime(true);
+    setRuntimeMessage(null);
+    try {
+      const result = await api.installAiExtras();
+      setRuntimeMessage(result.message);
+    } catch (err) {
+      setRuntimeMessage(err instanceof Error ? err.message : "Could not install AI libraries.");
+    } finally {
+      setInstallingRuntime(false);
+    }
+  };
 
   // Group models by a human category (ordered by the registry's phase field,
   // but the number is never shown).
@@ -227,6 +242,14 @@ function ModelManager() {
         downloaded on demand from their official sources; none are needed for manual
         editing, Auto Enhance, Color Match, color grading or RAW development.
       </p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button onClick={() => void installAiRuntime()} disabled={installingRuntime} className="lf-btn-subtle text-xs disabled:opacity-50">
+          {installingRuntime ? "Installing AI libraries…" : "Download & install AI libraries"}
+        </button>
+        <span className="text-xs text-mist-500">Optional ONNX Runtime for local model inference.</span>
+      </div>
+      {runtimeMessage && <p className="mt-2 break-words text-xs text-mist-400">{runtimeMessage}</p>}
 
       {storage && (
         <div className="mt-3 flex items-start gap-2 rounded-lg border border-ink-600 bg-ink-850 p-3">

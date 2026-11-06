@@ -11,7 +11,7 @@ with one build job per operating system.
    `[Unreleased]` section of `CHANGELOG.md` under the new version.
 2. Tag and push:
    ```bash
-   git tag v0.1.0 && git push origin v0.1.0
+   git tag v5.0.0 && git push origin v5.0.0
    ```
 3. The `ci.yml` workflow runs the test job, then builds installers on
    `windows-latest`, `macos-latest` and `ubuntu-latest` in parallel and attaches

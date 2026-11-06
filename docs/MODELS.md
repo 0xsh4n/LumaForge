@@ -67,7 +67,7 @@ not downloaded by Lumetta — and everything works with **no VLM installed**.
 
 | Model | Powers | Size | License | File name | Download |
 |---|---|---|---|---|---|
-| **Depth Anything V2 (Small)** | Depth map for the Depth & Bokeh workspace | 99 MB | Apache-2.0 | `depth_anything_v2_small.safetensors` | [direct](https://huggingface.co/depth-anything/Depth-Anything-V2-Small-hf/resolve/main/model.safetensors) · [card](https://huggingface.co/depth-anything/Depth-Anything-V2-Small-hf) |
+| **Depth Anything V2 (Small)** | Depth map for the Depth & Bokeh workspace | 99 MB | Apache-2.0 | `depth_anything_v2_small.onnx` | [direct](https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx) · [card](https://huggingface.co/onnx-community/depth-anything-v2-small) |
 
 *(Motion & Lens effects and classical DSLR background separation need no model.)*
 
@@ -75,7 +75,7 @@ not downloaded by Lumetta — and everything works with **no VLM installed**.
 
 | Model | Powers | Size | License | File name | Download |
 |---|---|---|---|---|---|
-| **Real-ESRGAN x4plus** | 4× upscaling + detail restoration | 67 MB | BSD-3-Clause | `RealESRGAN_x4plus.pth` | [direct](https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth) · [repo](https://github.com/xinntao/Real-ESRGAN) |
+| **Real-ESRGAN x4plus** | 2×/4× upscaling | 67 MB | BSD-3-Clause | `realesrgan_x4plus.onnx` | [direct](https://huggingface.co/othytenk/realesrgan-x4plus/resolve/main/realesrgan_x4plus.onnx) · [model card](https://huggingface.co/othytenk/realesrgan-x4plus) |
 | **Real-ESRGAN x2plus** | 2× upscaling + denoise | 67 MB | BSD-3-Clause | `RealESRGAN_x2plus.pth` | [direct](https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth) · [repo](https://github.com/xinntao/Real-ESRGAN) |
 
 ### Restoration & assistant
@@ -103,3 +103,10 @@ notice. VLMs are the heaviest items and are entirely optional.
 
 See also [GPU.md](GPU.md) for the compatibility report and execution-provider
 details.
+# Optional inference runtime
+
+BiRefNet mask inference uses the optional ONNX Runtime dependency listed in
+`backend/requirements-ai.txt`. Install `onnxruntime` for CPU inference. For CUDA,
+install a compatible `onnxruntime-gpu` build for the machine's CUDA/cuDNN setup;
+Lumetta reports the execution provider returned by ONNX Runtime. The runtime is
+loaded only when a model-backed feature is used.

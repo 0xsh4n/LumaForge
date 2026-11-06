@@ -60,6 +60,9 @@ export default function MasksPanel() {
   const closeMaskPanel = useEditor((s) => s.closeMaskPanel);
   const beginGesture = useEditor((s) => s.beginGesture);
   const endGesture = useEditor((s) => s.endGesture);
+  const brush = useEditor((s) => s.maskPanel.brush);
+  const setBrushSetting = useEditor((s) => s.setBrushSetting);
+  const clearBrush = useEditor((s) => s.clearBrush);
 
   if (!open) return null;
 
@@ -116,6 +119,9 @@ export default function MasksPanel() {
           <button onClick={() => addMask("radial")} className="lf-btn-subtle justify-center text-xs">
             <IconGradientRadial width={15} height={15} /> Radial
           </button>
+          <button onClick={() => addMask("brush")} className="lf-btn-subtle col-span-2 justify-center text-xs">
+            <IconLayers width={15} height={15} /> Brush
+          </button>
         </div>
 
         {masks.length === 0 ? (
@@ -169,7 +175,14 @@ export default function MasksPanel() {
                 <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-mist-500">
                   {active.type === "linear" ? "Gradient" : "Shape"}
                 </div>
-                {active.type === "linear" ? (
+                {active.type === "brush" ? (
+                  <div className="space-y-2 py-2">
+                    <label className="block text-xs text-mist-300">Brush size <input className="w-full accent-forge-500" type="range" min="0.003" max="0.15" step="0.001" value={brush.radius} onChange={(e) => setBrushSetting("radius", Number(e.target.value))} /></label>
+                    <label className="block text-xs text-mist-300">Hardness <input className="w-full accent-forge-500" type="range" min="0" max="1" step="0.01" value={brush.hardness} onChange={(e) => setBrushSetting("hardness", Number(e.target.value))} /></label>
+                    <label className="flex items-center gap-2 text-xs text-mist-300"><input type="checkbox" checked={brush.erase} onChange={(e) => setBrushSetting("erase", e.target.checked)} />Erase</label>
+                    <button className="lf-btn-subtle w-full justify-center text-xs" onClick={() => clearBrush(active.id)}>Clear stroke</button>
+                  </div>
+                ) : active.type === "linear" ? (
                   <>
                     {geo("angle", "Angle", -180, 180, 1, true)}
                     {geo("start", "Start", 0, 1, 0.01)}

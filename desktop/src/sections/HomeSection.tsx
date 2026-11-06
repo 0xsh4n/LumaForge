@@ -19,17 +19,15 @@ const CAPABILITIES = [
   { icon: IconFace, title: "Portrait Studio", body: "Natural, identity-preserving retouch — skin, eyes, teeth and hair — inside face-aware masks." },
   { icon: IconSliders, title: "Precision editing", body: "Light, colour, detail and effects: real, non-destructive, parameter-driven controls." },
   { icon: IconLayers, title: "Masks & local edits", body: "Linear, radial and brush masks with per-area adjustments and selective blur." },
+  { icon: IconLayers, title: "Depth & Bokeh", body: "Adjustable depth-based blur with a movable focus-distance control." },
+  { icon: IconSparkles, title: "Lumetta Assistant", body: "Describe a common edit, review the suggested adjustment values, then choose whether to apply them." },
+  { icon: IconExport, title: "AI Upscaling", body: "Enlarge images 2× or 4× with tiled Real-ESRGAN inference and a new editable source resolution." },
   { icon: IconGradientRadial, title: "Color grading", body: "Tone curves, HSL, colour wheels, split toning and .cube LUT import & export." },
   { icon: IconImport, title: "RAW & universal import", body: "Develop camera RAW/DNG and open JPEG, PNG, WebP, TIFF and HEIC at full resolution." },
   { icon: IconExport, title: "High-quality export", body: "Full-resolution JPEG, PNG, WebP or 16-bit TIFF with sRGB profile and metadata." },
 ];
 
-const COMING_SOON = [
-  "AI subject & sky masks",
-  "Depth-based bokeh",
-  "AI upscaling & restoration",
-  "Lumetta Assistant",
-];
+const IN_DEVELOPMENT = ["Additional DSLR lens looks"];
 
 export default function HomeSection() {
   const importImage = useEditor((s) => s.importImage);
@@ -132,15 +130,15 @@ export default function HomeSection() {
           </div>
         </div>
 
-        {/* coming soon */}
+        {/* development status */}
         <div className="mt-12">
           <SectionLabel>
             <span className="inline-flex items-center gap-1.5">
-              <IconSparkles width={14} height={14} /> Coming soon
+              <IconSparkles width={14} height={14} /> In development
             </span>
           </SectionLabel>
           <div className="mt-3 flex flex-wrap gap-2">
-            {COMING_SOON.map((name) => (
+            {IN_DEVELOPMENT.map((name) => (
               <span
                 key={name}
                 className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-[13px] text-mist-300"
@@ -150,7 +148,7 @@ export default function HomeSection() {
             ))}
           </div>
           <p className="mt-3 text-[13px] leading-relaxed text-mist-500">
-            These use optional AI models you can add from{" "}
+            Optional AI models can be added from{" "}
             <button
               onClick={() => setSection("settings")}
               className="text-forge-400 underline-offset-2 hover:underline"

@@ -19,6 +19,9 @@ Everything you need to get beautiful results from your photos — locally and of
 - [Manual adjustments](#manual-adjustments)
 - [AI Auto Enhance](#ai-auto-enhance)
 - [AI Color Match](#ai-color-match)
+- [Depth & Bokeh](#depth--bokeh)
+- [Lumetta Assistant](#lumetta-assistant)
+- [AI upscaling](#ai-upscaling)
 - [Portrait Studio](#portrait-studio)
 - [Color grading](#color-grading)
 - [RAW development](#raw-development)
@@ -140,6 +143,28 @@ colour, light, mood and whether it contains skin, then adapts each look to suit.
 
 Color Match works entirely offline with no model required.
 
+## Depth & Bokeh
+
+Open **Depth & Bokeh** from the editor's AI tools. Lumetta estimates relative
+depth, then applies an editable blur through the shared render pipeline. Choose
+an aperture preset and adjust focus distance, transition, subject protection,
+and highlight bloom. Install **Depth Anything V2 (Small)** from **Settings → AI
+models** to enable depth estimation. CPU inference is supported and reported.
+
+## Lumetta Assistant
+
+Describe a common edit such as “brighter and warmer with teal shadows.” The local
+rules assistant prepares an adjustment proposal while preserving your existing
+edits. Review its summary, then choose **Apply** or **Discard**. The proposal is
+data only; it never edits image pixels directly.
+
+## AI upscaling
+
+Choose **Upscale image** in the editor's AI tools, select 2× or 4×, and start
+the job. Progress, CPU/GPU provider, and cancellation appear in the bottom bar.
+When it completes, Lumetta replaces the working source with the larger image and
+keeps your adjustment parameters. Install **Real-ESRGAN x4plus** in Settings.
+
 ## Portrait Studio
 
 Open **AI Portrait Retouch**. Lumetta detects faces and builds feathered masks
@@ -186,7 +211,7 @@ Apply adjustments to only part of the photo. From the left toolbar, **Masks**:
 
 - **Linear gradient** — a smooth selection along an angle (skies, foregrounds).
 - **Radial gradient** — an elliptical selection (spotlight a subject).
-- **Brush** — paint the selection freehand *(coming soon in the canvas)*.
+- **Brush** — paint a selection directly on the canvas with adjustable size and hardness.
 
 Each mask carries its own adjustments — exposure, contrast, tone, temperature,
 tint, saturation, vibrance, clarity, sharpness and a **selective blur** — plus

@@ -209,7 +209,8 @@ class Mask(BaseModel):
 
     id: str
     name: str = "Mask"
-    type: Literal["linear", "radial", "brush"] = "radial"
+    type: Literal["linear", "radial", "brush", "ai_subject", "ai_background", "ai_sky"] = "radial"
+    ai_model: Optional[str] = None
     enabled: bool = True
     invert: bool = False
     opacity: float = Field(100.0, ge=0, le=100)
@@ -245,6 +246,16 @@ class MotionAdjust(BaseModel):
     cy: float = Field(0.5, ge=0, le=1)
 
 
+class DepthAdjust(BaseModel):
+    enabled: bool = False
+    focus: float = Field(0.5, ge=0, le=1)
+    aperture: float = Field(8.0, ge=1.4, le=8.0)
+    transition: float = Field(30.0, ge=0, le=100)
+    bokeh_shape: Literal["round", "hex"] = "round"
+    subject_protect: float = Field(70.0, ge=0, le=100)
+    highlight_bloom: float = Field(0.0, ge=0, le=100)
+
+
 class Adjustments(BaseModel):
     """Complete non-destructive edit description."""
 
@@ -256,6 +267,7 @@ class Adjustments(BaseModel):
     portrait: PortraitAdjust = Field(default_factory=PortraitAdjust)
     masks: list[Mask] = Field(default_factory=list)
     motion: MotionAdjust = Field(default_factory=MotionAdjust)
+    depth: DepthAdjust = Field(default_factory=DepthAdjust)
 
 
 # ---------------------------------------------------------------------------

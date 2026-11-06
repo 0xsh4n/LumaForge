@@ -115,3 +115,11 @@ Versioning will follow semver once 1.0 ships.
 ### Notes
 - Native installers must be built on their target OS (CI does this). The Linux
   dev machine used for development cannot compile the Tauri shell (no WebKitGTK).
+# Unreleased
+
+- Added optional ONNX inference infrastructure with lazy runtime loading, a bounded session cache, explicit CUDA/CPU provider reporting, and tiled inference support.
+- Added BiRefNet subject, background, and sky matte computation with per-image caching and integration with editable local masks. Missing models return an install prompt.
+- Added a serial in-process AI job queue and job status/cancel endpoints as infrastructure for long-running model tasks.
+- Added Depth Anything V2 depth maps, editable depth-driven bokeh controls, and a local rules-based assistant with reviewable adjustment proposals.
+- Added brush mask painting with normalized strokes, undo support, brush controls, and a canvas overlay.
+- Added Settings action to download and install optional ONNX Runtime libraries directly through the backend.

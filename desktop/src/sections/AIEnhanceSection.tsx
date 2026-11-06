@@ -146,14 +146,14 @@ export default function AIEnhanceSection() {
           </button>
         </section>
 
-        {/* Coming soon */}
+        {/* In development */}
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {COMING.map((f) => {
             const Icon = f.icon;
             return (
               <div key={f.name} className="relative lf-card p-5">
                 <span className="absolute right-4 top-4 rounded bg-ink-700 px-2 py-0.5 text-[11px] font-medium text-mist-500">
-                  Soon
+                  In development
                 </span>
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-forge-500/15 text-forge-400">
                   <Icon width={20} height={20} />

@@ -66,6 +66,32 @@ async function blobFetch(path: string, init?: RequestInit, signal?: AbortSignal)
 export const api = {
   base: API_BASE,
 
+  async installAiExtras(): Promise<{ installed: boolean; message: string }> {
+    return jsonFetch("/api/system/ai-extras/install", { method: "POST" });
+  },
+
+  async computeDepth(id: string): Promise<{ available: boolean; cached: boolean; provider?: string; message?: string }> {
+    return jsonFetch(`/api/images/${id}/depth`, { method: "POST" });
+  },
+
+  async assistantSuggest(id: string, text: string, adjustments: Adjustments) {
+    return jsonFetch<import("../types").AssistantSuggestion>(`/api/images/${id}/assistant`, {
+      method: "POST", body: JSON.stringify({ text, adjustments }),
+    });
+  },
+
+  async aiJobs(): Promise<{ jobs: { id: string; state: string; progress: number; provider: string | null; message: string }[] }> {
+    return jsonFetch("/api/ai/jobs");
+  },
+  async cancelAiJob(id: string) {
+    return jsonFetch(`/api/ai/jobs/${id}/cancel`, { method: "POST" });
+  },
+  async startUpscale(id: string, scale: 2 | 4) {
+    return jsonFetch<{ job_id: string }>(`/api/images/${id}/upscale`, {
+      method: "POST", body: JSON.stringify({ scale, model: "realesrgan_x4plus", denoise: false, restore_faces: false }),
+    });
+  },
+
   async health(): Promise<{ status: string; version: string }> {
     return jsonFetch("/api/system/health");
   },
@@ -80,6 +106,7 @@ export const api = {
       body: JSON.stringify({ path }),
     });
   },
+  async imageMeta(id: string): Promise<ImageMeta> { return jsonFetch(`/api/images/${id}`); },
 
   async importUpload(file: File): Promise<ImageMeta> {
     const form = new FormData();
@@ -119,6 +146,13 @@ export const api = {
     message?: string;
   }> {
     return jsonFetch(`/api/images/${id}/detect-faces`, { method: "POST" });
+  },
+
+  async computeAiMask(id: string, kind: "subject" | "background" | "sky", model = "birefnet_lite") {
+    return jsonFetch<{ available: boolean; cached: boolean; provider?: string; message?: string }>(
+      `/api/images/${id}/ai-mask`,
+      { method: "POST", body: JSON.stringify({ kind, model }) },
+    );
   },
 
   async portraitModes(): Promise<PortraitMode[]> {

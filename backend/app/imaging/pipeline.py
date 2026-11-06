@@ -17,6 +17,7 @@ from . import adjustments as adj
 from . import grading
 from . import masks as masks_mod
 from . import motion as motion_mod
+from . import depth as depth_mod
 from . import portrait as portrait_mod
 from .color import luminance
 
@@ -26,7 +27,8 @@ def _lut_resolver(lut_id: str):
 
 
 def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0,
-           faces: list | None = None) -> np.ndarray:
+           faces: list | None = None, mask_sources: dict[str, np.ndarray] | None = None,
+           depth_source: np.ndarray | None = None, subject_source: np.ndarray | None = None) -> np.ndarray:
     """Apply the full adjustment stack. ``original`` is float32 RGB [0,1].
 
     ``px_scale`` = (this render's long edge) / (original's long edge). It is
@@ -58,7 +60,9 @@ def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0,
         masks = face_mod.build_masks(img, faces)
         img = portrait_mod.apply_portrait(img, a.portrait, masks)
     # 5d. Masking engine — local adjustments within linear/radial/brush masks
-    img = masks_mod.apply_masks(img, a.masks, px_scale)
+    img = masks_mod.apply_masks(img, a.masks, px_scale, mask_sources)
+    if a.depth.enabled and depth_source is not None:
+        img = depth_mod.apply_bokeh(img, depth_source, a.depth, px_scale, subject_source)
     # 6. Noise reduction (before sharpening)
     img = adj.apply_noise_reduction(img, a.detail.noise_reduction, px_scale)
     # 7. Sharpening

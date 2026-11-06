@@ -92,9 +92,13 @@ def _brush(mask: Mask, h: int, w: int) -> np.ndarray:
     return m
 
 
-def build_mask(mask: Mask, h: int, w: int) -> np.ndarray:
+def build_mask(mask: Mask, h: int, w: int, source: np.ndarray | None = None) -> np.ndarray:
     """Build the float32 [0,1] weight map for ``mask`` at ``h×w``."""
-    if mask.type == "linear":
+    if mask.type.startswith("ai_"):
+        if source is None:
+            return np.zeros((h, w), np.float32)
+        m = cv2.resize(source, (w, h), interpolation=cv2.INTER_LINEAR)
+    elif mask.type == "linear":
         m = _linear(mask, h, w)
     elif mask.type == "radial":
         m = _radial(mask, h, w)
@@ -149,7 +153,8 @@ def apply_local(img: np.ndarray, local: LocalAdjust, px_scale: float = 1.0) -> n
     return np.clip(out, 0.0, 1.0)
 
 
-def apply_masks(img: np.ndarray, masks: list[Mask], px_scale: float = 1.0) -> np.ndarray:
+def apply_masks(img: np.ndarray, masks: list[Mask], px_scale: float = 1.0,
+                mask_sources: dict[str, np.ndarray] | None = None) -> np.ndarray:
     """Composite each enabled mask's local adjustments onto ``img``, in order."""
     if not masks:
         return img
@@ -158,7 +163,7 @@ def apply_masks(img: np.ndarray, masks: list[Mask], px_scale: float = 1.0) -> np
     for mask in masks:
         if not mask.enabled or _local_is_neutral(mask.local):
             continue
-        m = build_mask(mask, h, w)
+        m = build_mask(mask, h, w, (mask_sources or {}).get(mask.id))
         if float(m.max()) <= 0.0:
             continue
         local = apply_local(out, mask.local, px_scale)

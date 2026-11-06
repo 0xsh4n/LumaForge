@@ -81,6 +81,7 @@ interface PortraitState {
 interface MaskPanelState {
   open: boolean;
   activeId: string | null;
+  brush: { radius: number; hardness: number; erase: boolean };
 }
 
 interface ColorMatchState {
@@ -92,6 +93,7 @@ interface ColorMatchState {
   activeCardId: string | null;
   intensity: number;
 }
+interface DepthPanelState { open: boolean; loading: boolean; message: string | null; }
 
 interface EditorState {
   section: Section;
@@ -124,6 +126,8 @@ interface EditorState {
   portrait: PortraitState;
   maskPanel: MaskPanelState;
   colorMatch: ColorMatchState;
+  depthPanel: DepthPanelState;
+  assistantOpen: boolean;
   luts: LutInfo[];
   lutError: string | null;
   developing: boolean; // RAW re-decode in progress
@@ -148,6 +152,7 @@ interface EditorState {
   openPath: (path: string) => Promise<void>;
   rawDevelop: (params: RawParams) => Promise<void>;
   closeImage: () => void;
+  refreshImageMeta: () => Promise<void>;
 
   // projects (.lfp)
   loadRecentProjects: () => Promise<void>;
@@ -177,10 +182,18 @@ interface EditorState {
   // masking engine (Phase 4)
   openMaskPanel: () => void;
   closeMaskPanel: () => void;
+  openDepth: () => Promise<void>;
+  setDepthField: (field: keyof Adjustments["depth"], value: number | boolean | string) => void;
+  closeDepth: () => void;
+  openAssistant: () => void;
+  closeAssistant: () => void;
   addMask: (type: MaskType) => void;
   removeMask: (id: string) => void;
   selectMask: (id: string | null) => void;
   setMaskField: (id: string, field: keyof Mask, value: number | boolean) => void;
+  addBrushDab: (id: string, dab: { x: number; y: number; radius: number; hardness: number; erase: boolean }) => void;
+  clearBrush: (id: string) => void;
+  setBrushSetting: (key: "radius" | "hardness" | "erase", value: number | boolean) => void;
   setMaskLocal: (id: string, field: keyof LocalAdjust, value: number) => void;
 
   // motion & lens effects (Phase 5)
@@ -358,11 +371,13 @@ function loadMeta(
       modelAvailable: get().portrait.modelAvailable,
       message: null,
     },
-    maskPanel: { open: false, activeId: null },
+    maskPanel: { open: false, activeId: null, brush: { radius: 0.025, hardness: 0.6, erase: false } },
     colorMatch: {
       open: false, loading: false, error: null, cards: [], scene: null,
       activeCardId: null, intensity: 100,
     },
+    depthPanel: { open: false, loading: false, message: null },
+    assistantOpen: false,
   });
   scheduleRender(get, set, 0);
   api.analyze(meta.id).then((a) => set({ analysis: a })).catch(() => {});
@@ -440,11 +455,13 @@ export const useEditor = create<EditorState>((set, get) => ({
     modelAvailable: true,
     message: null,
   },
-  maskPanel: { open: false, activeId: null },
+    maskPanel: { open: false, activeId: null, brush: { radius: 0.025, hardness: 0.6, erase: false } },
   colorMatch: {
     open: false, loading: false, error: null, cards: [], scene: null,
     activeCardId: null, intensity: 100,
   },
+  depthPanel: { open: false, loading: false, message: null },
+  assistantOpen: false,
   luts: [],
   lutError: null,
   developing: false,
@@ -612,7 +629,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         const now = new Date().toISOString();
         const proj = {
           schema_version: 1,
-          app_version: get().backend.version ?? "0.1.0",
+          app_version: get().backend.version ?? "5.0.0",
           name: base,
           source_path: image.source_path,
           original_width: image.width,
@@ -674,6 +691,16 @@ export const useEditor = create<EditorState>((set, get) => ({
       future: [],
       section: "home",
     });
+  },
+
+  refreshImageMeta: async () => {
+    const id = get().image?.id;
+    if (!id) return;
+    try {
+      const image = await api.imageMeta(id);
+      set({ image });
+      scheduleRender(get, set, 0);
+    } catch { /* image may have been closed while a task completed */ }
   },
 
   beginGesture: () => {
@@ -822,6 +849,40 @@ export const useEditor = create<EditorState>((set, get) => ({
   openMaskPanel: () => set({ section: "editor", maskPanel: { ...get().maskPanel, open: true } }),
   closeMaskPanel: () => set({ maskPanel: { ...get().maskPanel, open: false } }),
 
+  openDepth: async () => {
+    const image = get().image;
+    if (!image) return;
+    set({ section: "editor", depthPanel: { open: true, loading: true, message: null } });
+    try {
+      const result = await api.computeDepth(image.id);
+      if (!result.available) {
+        set({ depthPanel: { open: true, loading: false, message: result.message ?? "Install Depth Anything V2 in Settings → AI models." } });
+        return;
+      }
+      if (!get().adjustments.depth.enabled) {
+        get().beginGesture();
+        const next = cloneAdjustments(get().adjustments);
+        next.depth.enabled = true;
+        set({ adjustments: next });
+        get().endGesture();
+        scheduleRender(get, set, 0);
+      }
+      set({ depthPanel: { open: true, loading: false, message: result.message ?? null } });
+    } catch (e) {
+      set({ depthPanel: { open: true, loading: false, message: e instanceof Error ? e.message : "Depth estimation failed" } });
+    }
+  },
+  setDepthField: (field, value) => {
+    const next = cloneAdjustments(get().adjustments);
+    (next.depth as unknown as Record<string, unknown>)[field] = value;
+    next.depth.enabled = true;
+    set({ adjustments: next });
+    scheduleRender(get, set);
+  },
+  closeDepth: () => set({ depthPanel: { ...get().depthPanel, open: false } }),
+  openAssistant: () => set({ section: "editor", assistantOpen: true }),
+  closeAssistant: () => set({ assistantOpen: false }),
+
   addMask: (type) => {
     if (!get().image) return;
     const cur = get().adjustments;
@@ -833,7 +894,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       past: [...get().past, cloneAdjustments(cur)],
       future: [],
       adjustments: next,
-      maskPanel: { open: true, activeId: mask.id },
+      maskPanel: { ...get().maskPanel, open: true, activeId: mask.id },
     });
     scheduleRender(get, set, 0);
   },
@@ -866,6 +927,27 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ adjustments: next });
     scheduleRender(get, set);
   },
+
+  addBrushDab: (id, dab) => {
+    const next = cloneAdjustments(get().adjustments);
+    const mask = next.masks.find((x) => x.id === id && x.type === "brush");
+    if (!mask) return;
+    mask.dabs.push(dab);
+    set({ adjustments: next });
+    scheduleRender(get, set);
+  },
+
+  clearBrush: (id) => {
+    const cur = get().adjustments;
+    const next = cloneAdjustments(cur);
+    const mask = next.masks.find((x) => x.id === id && x.type === "brush");
+    if (!mask || mask.dabs.length === 0) return;
+    next.masks.find((x) => x.id === id)!.dabs = [];
+    set({ past: [...get().past, cloneAdjustments(cur)], future: [], adjustments: next });
+    scheduleRender(get, set, 0);
+  },
+
+  setBrushSetting: (key, value) => set({ maskPanel: { ...get().maskPanel, brush: { ...get().maskPanel.brush, [key]: value } } }),
 
   setMaskLocal: (id, field, value) => {
     const next = cloneAdjustments(get().adjustments);

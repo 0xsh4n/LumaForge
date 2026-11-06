@@ -76,6 +76,10 @@ class ImageStore:
         session = self.get(sid)
         if not session:
             return None
+        from .imaging.segment import clear_cache as clear_segment_cache
+        clear_segment_cache(sid)
+        from .imaging.depth import clear_cache as clear_depth_cache
+        clear_depth_cache(sid)
         preview_base, scale = imgio.downscale_to(img, self._settings.preview_max_dim)
         h, w = img.shape[:2]
         with session._lock:
@@ -88,6 +92,23 @@ class ImageStore:
                                  "megapixels": round(w * h / 1e6, 2)})
         return session
 
+    def replace_original(self, sid: str, img: np.ndarray) -> ImageSession | None:
+        session = self.get(sid)
+        if not session:
+            return None
+        from .imaging.segment import clear_cache as clear_segment_cache
+        from .imaging.depth import clear_cache as clear_depth_cache
+        clear_segment_cache(sid); clear_depth_cache(sid)
+        preview, scale = imgio.downscale_to(img, self._settings.preview_max_dim)
+        h, w = img.shape[:2]
+        with session._lock:
+            session.original = np.ascontiguousarray(img, dtype=np.float32)
+            session.preview_base = np.ascontiguousarray(preview, dtype=np.float32)
+            session.preview_scale = scale
+            session.faces = None
+            session.meta.update({"width": w, "height": h, "megapixels": round(w * h / 1e6, 2)})
+        return session
+
     def get(self, sid: str) -> ImageSession | None:
         with self._lock:
             s = self._items.get(sid)
@@ -96,6 +117,10 @@ class ImageStore:
             return s
 
     def remove(self, sid: str) -> bool:
+        from .imaging.segment import clear_cache as clear_segment_cache
+        clear_segment_cache(sid)
+        from .imaging.depth import clear_cache as clear_depth_cache
+        clear_depth_cache(sid)
         with self._lock:
             return self._items.pop(sid, None) is not None
 

@@ -9,15 +9,51 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.concurrency import run_in_threadpool
+import numpy as np
 
 from ..config import get_settings
 from ..imaging import io as imgio
 from ..imaging import pipeline
+from ..imaging import segment
+from ..imaging import depth as depth_mod
 from ..imaging.color import to_uint8
 from ..schemas import ExportRequest, ExportResult, RenderRequest
 from ..store import ImageSession, store
 
 router = APIRouter(prefix="/api/images", tags=["process"])
+
+
+def _mask_sources(session: ImageSession, image: np.ndarray, masks) -> dict[str, np.ndarray]:
+    result = {}
+    for mask in masks:
+        if mask.type.startswith("ai_"):
+            kind = mask.type.removeprefix("ai_")
+            model = mask.ai_model or "birefnet_lite"
+            try:
+                result[mask.id] = segment.get_mask(session.id, image, model, kind)
+            except RuntimeError:
+                # Unavailable sources render as empty selections; endpoint/UI carries the reason.
+                continue
+    return result
+
+
+def _depth_source(session: ImageSession, image: np.ndarray, enabled: bool):
+    if not enabled:
+        return None, None
+    try:
+        depth, _provider = depth_mod.depth_map(session.id, image)
+        subject = segment.cached_mask(session.id, "birefnet_lite", "subject", image.shape[:2])
+        from .. import models_registry as model_registry
+        spec = model_registry.get("birefnet_lite")
+        if subject is None and spec is not None:
+            if model_registry.is_installed(spec):
+                try:
+                    subject = segment.get_mask(session.id, image, "birefnet_lite", "subject")
+                except RuntimeError:
+                    subject = None
+        return depth, subject
+    except RuntimeError:
+        return None, None
 
 
 def _render_preview(session: ImageSession, req: RenderRequest) -> bytes:
@@ -27,7 +63,10 @@ def _render_preview(session: ImageSession, req: RenderRequest) -> bytes:
     base, _ = imgio.downscale_to(base, max_dim)
     render_long = max(base.shape[:2])
     px_scale = render_long / float(session.original_long_edge)
-    out = pipeline.render(base, req.adjustments, px_scale=px_scale, faces=session.faces)
+    depth, subject = _depth_source(session, base, req.adjustments.depth.enabled)
+    out = pipeline.render(base, req.adjustments, px_scale=px_scale, faces=session.faces,
+                          mask_sources=_mask_sources(session, base, req.adjustments.masks),
+                          depth_source=depth, subject_source=subject)
     return imgio.encode_preview(out, req.format, req.quality)
 
 
@@ -48,7 +87,10 @@ def _export(session: ImageSession, req: ExportRequest) -> dict:
         px_scale = scale
     else:
         base, px_scale = original, 1.0
-    out = pipeline.render(base, req.adjustments, px_scale=px_scale, faces=session.faces)
+    depth, subject = _depth_source(session, base, req.adjustments.depth.enabled)
+    out = pipeline.render(base, req.adjustments, px_scale=px_scale, faces=session.faces,
+                          mask_sources=_mask_sources(session, base, req.adjustments.masks),
+                          depth_source=depth, subject_source=subject)
     return imgio.save_image(
         out, req.path, fmt=req.format, quality=req.quality,
         keep_metadata=req.keep_metadata,
