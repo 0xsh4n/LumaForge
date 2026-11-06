@@ -162,6 +162,89 @@ class PortraitAdjust(BaseModel):
     naturalness: float = Field(70.0, ge=0, le=100)
 
 
+# --------------------------- Masking engine (Phase 4) ----------------------
+
+
+class LocalAdjust(BaseModel):
+    """Tonal/colour/detail changes applied only *within* a mask.
+
+    A focused subset of the global sliders — the moves that are useful locally.
+    ``blur`` is a selective defocus (the classical, model-free part of the
+    DSLR-look / depth story); ``sharpness`` its opposite. All neutral by default,
+    so a mask with no local edits is a no-op.
+    """
+
+    exposure: float = Field(0.0, ge=-5.0, le=5.0)
+    contrast: float = Field(0.0, ge=-100, le=100)
+    highlights: float = Field(0.0, ge=-100, le=100)
+    shadows: float = Field(0.0, ge=-100, le=100)
+    whites: float = Field(0.0, ge=-100, le=100)
+    blacks: float = Field(0.0, ge=-100, le=100)
+    temperature: float = Field(0.0, ge=-100, le=100)
+    tint: float = Field(0.0, ge=-100, le=100)
+    saturation: float = Field(0.0, ge=-100, le=100)
+    vibrance: float = Field(0.0, ge=-100, le=100)
+    clarity: float = Field(0.0, ge=-100, le=100)
+    sharpness: float = Field(0.0, ge=0, le=100)
+    blur: float = Field(0.0, ge=0, le=100, description="selective defocus")
+
+
+class BrushDab(BaseModel):
+    """One painted circular dab, normalized to [0,1] so it scales to any render."""
+
+    x: float = Field(0.5, ge=0, le=1)
+    y: float = Field(0.5, ge=0, le=1)
+    radius: float = Field(0.08, gt=0, le=2.0, description="fraction of the long edge")
+    hardness: float = Field(0.5, ge=0, le=1)
+    erase: bool = False
+
+
+class Mask(BaseModel):
+    """A selection whose geometry is parameters, not baked pixels.
+
+    Three classical (model-free) kinds: ``linear`` and ``radial`` gradients and a
+    ``brush``. Each carries its own :class:`LocalAdjust`. AI subject/sky masks
+    (BiRefNet/SAM) will slot in as further ``type`` values in a later pass.
+    """
+
+    id: str
+    name: str = "Mask"
+    type: Literal["linear", "radial", "brush"] = "radial"
+    enabled: bool = True
+    invert: bool = False
+    opacity: float = Field(100.0, ge=0, le=100)
+    feather: float = Field(50.0, ge=0, le=100)
+    # linear gradient: direction + the two stops along it (0..1 of the image span)
+    angle: float = Field(0.0, ge=-180, le=180)
+    start: float = Field(0.35, ge=-1.0, le=2.0)
+    end: float = Field(0.65, ge=-1.0, le=2.0)
+    # radial / brush center and (radial) radii, as fractions of width/height
+    cx: float = Field(0.5, ge=0, le=1)
+    cy: float = Field(0.5, ge=0, le=1)
+    rx: float = Field(0.35, gt=0, le=2.0)
+    ry: float = Field(0.35, gt=0, le=2.0)
+    dabs: list[BrushDab] = Field(default_factory=list)
+    local: LocalAdjust = Field(default_factory=LocalAdjust)
+
+
+# --------------------- Motion & lens effects (Phase 5) ---------------------
+
+
+class MotionAdjust(BaseModel):
+    """Creative motion blur applied to the whole frame.
+
+    ``linear`` is directional (convolution line kernel); ``zoom`` and ``spin``
+    are radial/rotational blurs about a center. Selective (subject/background)
+    motion is achieved by masking a ``blur`` LocalAdjust; this is the global look.
+    """
+
+    type: Literal["none", "linear", "zoom", "spin"] = "none"
+    amount: float = Field(0.0, ge=0, le=100)
+    angle: float = Field(0.0, ge=-180, le=180, description="direction for linear")
+    cx: float = Field(0.5, ge=0, le=1, description="center for zoom/spin")
+    cy: float = Field(0.5, ge=0, le=1)
+
+
 class Adjustments(BaseModel):
     """Complete non-destructive edit description."""
 
@@ -171,6 +254,8 @@ class Adjustments(BaseModel):
     effects: EffectsAdjust = Field(default_factory=EffectsAdjust)
     grade: Grade = Field(default_factory=Grade)
     portrait: PortraitAdjust = Field(default_factory=PortraitAdjust)
+    masks: list[Mask] = Field(default_factory=list)
+    motion: MotionAdjust = Field(default_factory=MotionAdjust)
 
 
 # ---------------------------------------------------------------------------

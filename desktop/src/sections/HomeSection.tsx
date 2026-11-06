@@ -13,11 +13,13 @@ const SHIPPED = [
   ["Phase 2b", "Color Grading"],
   ["Phase 2c", "RAW Development"],
   ["Phase 3", "Portrait Studio"],
+  ["Phase 4", "Masks & local edits"],
+  ["Phase 5", "Motion Blur"],
 ];
 
 const ROADMAP = [
-  ["Phase 4", "Masking engine"],
-  ["Phase 5", "DSLR Look · Depth · Motion"],
+  ["Phase 4+", "AI subject / sky masks"],
+  ["Phase 5+", "Depth & bokeh"],
   ["Phase 6", "Upscaling & restoration"],
   ["Phase 7", "Color Match · Luma Assistant"],
 ];

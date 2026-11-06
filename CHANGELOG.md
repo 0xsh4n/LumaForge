@@ -44,6 +44,23 @@ Versioning will follow semver once 1.0 ships.
   background exposure/saturation. No geometry change, no generative faces.
 - 10 editable Portrait Studio modes + intensity & naturalness.
 
+### Added — Phase 4: Masking engine (classical)
+- Non-destructive **mask layers** — Linear & Radial gradients and a brush model —
+  defined as parameters that rebuild at any resolution, each with its own local
+  adjustments (exposure, contrast, highlights/shadows/whites/blacks, temperature,
+  tint, saturation, vibrance, clarity, sharpness and a **selective blur**),
+  feather, invert, opacity, and stacked independently-editable layers.
+  `backend/app/imaging/masks.py`, composited in the shared render pipeline.
+- Editor **Masks panel** (add/select/remove layers, geometry + local sliders) and
+  Linear/Radial/Manage entries in the left toolbar. 13 dedicated tests.
+
+### Added — Phase 5: Motion & lens effects (classical)
+- Whole-frame **motion blur** — directional (line-kernel convolution), **zoom**
+  and **spin** (averaged warps about a center) — resolution-independent so preview
+  matches export. `backend/app/imaging/motion.py`, with a Motion Blur section in
+  the adjust panel. Selective (subject/background) motion via a mask's blur. 8
+  dedicated tests.
+
 ### Added — Model Manager & phases 4–7 groundwork
 - Trusted AI-model catalog (`backend/app/models_registry.py`): every optional
   model for phases 4–7 (BiRefNet, MediaPipe Face Landmarker, SAM 2, Depth

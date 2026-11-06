@@ -1,4 +1,14 @@
-import type { Adjustments, AdjustGroup, Grade, HSLBandName, PortraitAdjust } from "../types";
+import type {
+  Adjustments,
+  AdjustGroup,
+  Grade,
+  HSLBandName,
+  LocalAdjust,
+  Mask,
+  MaskType,
+  MotionAdjust,
+  PortraitAdjust,
+} from "../types";
 
 export const HSL_BANDS: HSLBandName[] = [
   "red", "orange", "yellow", "green", "aqua", "blue", "purple", "magenta",
@@ -40,6 +50,46 @@ export function neutralPortrait(): PortraitAdjust {
   };
 }
 
+export function neutralLocal(): LocalAdjust {
+  return {
+    exposure: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0,
+    temperature: 0, tint: 0, saturation: 0, vibrance: 0, clarity: 0,
+    sharpness: 0, blur: 0,
+  };
+}
+
+export function neutralMotion(): MotionAdjust {
+  return { type: "none", amount: 0, angle: 0, cx: 0.5, cy: 0.5 };
+}
+
+const MASK_TYPE_NAME: Record<MaskType, string> = {
+  linear: "Linear Gradient",
+  radial: "Radial Gradient",
+  brush: "Brush",
+};
+
+/** Build a fresh mask of the given kind with sensible default geometry. */
+export function makeMask(type: MaskType, index: number): Mask {
+  return {
+    id: `mask_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    name: `${MASK_TYPE_NAME[type]} ${index}`,
+    type,
+    enabled: true,
+    invert: false,
+    opacity: 100,
+    feather: 50,
+    angle: type === "linear" ? 90 : 0, // linear defaults to a top→bottom gradient
+    start: 0.35,
+    end: 0.65,
+    cx: 0.5,
+    cy: 0.5,
+    rx: 0.35,
+    ry: 0.35,
+    dabs: [],
+    local: neutralLocal(),
+  };
+}
+
 export function neutralAdjustments(): Adjustments {
   return {
     light: { exposure: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0 },
@@ -57,6 +107,8 @@ export function neutralAdjustments(): Adjustments {
     effects: { vignette: 0, grain: 0, defringe: 0, distortion: 0 },
     grade: neutralGrade(),
     portrait: neutralPortrait(),
+    masks: [],
+    motion: neutralMotion(),
   };
 }
 
@@ -85,6 +137,9 @@ export function lerpAdjustments(a: Adjustments, b: Adjustments, t: number): Adju
   });
   out.grade = JSON.parse(JSON.stringify(b.grade));
   out.portrait = JSON.parse(JSON.stringify(b.portrait));
+  // Masks and motion are not interpolated (Auto Enhance never sets them).
+  out.masks = JSON.parse(JSON.stringify(b.masks));
+  out.motion = JSON.parse(JSON.stringify(b.motion));
   return out;
 }
 

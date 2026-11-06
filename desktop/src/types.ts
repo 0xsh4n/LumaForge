@@ -124,6 +124,63 @@ export interface PortraitMode {
   params: PortraitAdjust;
 }
 
+// ---- Masking engine (Phase 4) ----
+export interface LocalAdjust {
+  exposure: number;
+  contrast: number;
+  highlights: number;
+  shadows: number;
+  whites: number;
+  blacks: number;
+  temperature: number;
+  tint: number;
+  saturation: number;
+  vibrance: number;
+  clarity: number;
+  sharpness: number;
+  blur: number;
+}
+
+export interface BrushDab {
+  x: number;
+  y: number;
+  radius: number;
+  hardness: number;
+  erase: boolean;
+}
+
+export type MaskType = "linear" | "radial" | "brush";
+
+export interface Mask {
+  id: string;
+  name: string;
+  type: MaskType;
+  enabled: boolean;
+  invert: boolean;
+  opacity: number;
+  feather: number;
+  angle: number;
+  start: number;
+  end: number;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  dabs: BrushDab[];
+  local: LocalAdjust;
+}
+
+// ---- Motion & lens effects (Phase 5) ----
+export type MotionType = "none" | "linear" | "zoom" | "spin";
+
+export interface MotionAdjust {
+  type: MotionType;
+  amount: number;
+  angle: number;
+  cx: number;
+  cy: number;
+}
+
 export interface Adjustments {
   light: LightAdjust;
   color: ColorAdjust;
@@ -131,6 +188,8 @@ export interface Adjustments {
   effects: EffectsAdjust;
   grade: Grade;
   portrait: PortraitAdjust;
+  masks: Mask[];
+  motion: MotionAdjust;
 }
 
 export interface LutInfo {

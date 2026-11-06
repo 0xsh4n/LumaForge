@@ -19,14 +19,12 @@ interface Tool {
 
 const AI_TOOLS: Tool[] = [];
 
+// AI/model-driven masks (need model inference) — still upcoming.
 const MASK_TOOLS: Tool[] = [
   { label: "Subject Mask", icon: IconSubject, phase: 4 },
   { label: "Background Mask", icon: IconLayers, phase: 4 },
-  { label: "Face Mask", icon: IconFace, phase: 4 },
   { label: "Sky Mask", icon: IconSky, phase: 4 },
   { label: "Brush Mask", icon: IconBrush, phase: 4 },
-  { label: "Linear Gradient", icon: IconGradientLinear, phase: 4 },
-  { label: "Radial Gradient", icon: IconGradientRadial, phase: 4 },
 ];
 
 function UpcomingTool({ tool }: { tool: Tool }) {
@@ -55,6 +53,10 @@ export default function LeftToolbar() {
   const autoOpen = useEditor((s) => s.autoEnhance.open);
   const openPortrait = useEditor((s) => s.openPortrait);
   const portraitOpen = useEditor((s) => s.portrait.open);
+  const addMask = useEditor((s) => s.addMask);
+  const openMaskPanel = useEditor((s) => s.openMaskPanel);
+  const maskPanelOpen = useEditor((s) => s.maskPanel.open);
+  const maskCount = useEditor((s) => s.adjustments.masks.length);
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col border-r border-ink-600 bg-ink-800">
@@ -107,14 +109,47 @@ export default function LeftToolbar() {
           ))}
         </ToolSection>
         <ToolSection title="Masks">
+          <button
+            onClick={() => addMask("linear")}
+            disabled={!hasImage}
+            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] text-mist-200 transition-colors hover:bg-ink-700 disabled:opacity-40"
+          >
+            <IconGradientLinear width={18} height={18} className="shrink-0" />
+            <span className="flex-1 truncate">Linear Gradient</span>
+            <span className="rounded bg-forge-500/20 px-1.5 py-0.5 text-[10px] font-medium text-forge-300">New</span>
+          </button>
+          <button
+            onClick={() => addMask("radial")}
+            disabled={!hasImage}
+            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] text-mist-200 transition-colors hover:bg-ink-700 disabled:opacity-40"
+          >
+            <IconGradientRadial width={18} height={18} className="shrink-0" />
+            <span className="flex-1 truncate">Radial Gradient</span>
+            <span className="rounded bg-forge-500/20 px-1.5 py-0.5 text-[10px] font-medium text-forge-300">New</span>
+          </button>
+          <button
+            onClick={openMaskPanel}
+            disabled={!hasImage}
+            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition-colors disabled:opacity-40 ${
+              maskPanelOpen ? "bg-forge-500/15 text-forge-300" : "text-mist-200 hover:bg-ink-700"
+            }`}
+          >
+            <IconLayers width={18} height={18} className="shrink-0" />
+            <span className="flex-1 truncate">Manage Masks</span>
+            {maskCount > 0 && (
+              <span className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-medium text-mist-400">
+                {maskCount}
+              </span>
+            )}
+          </button>
           {MASK_TOOLS.map((t) => (
             <UpcomingTool key={t.label} tool={t} />
           ))}
         </ToolSection>
 
         <p className="mt-3 px-3 text-[11px] leading-relaxed text-mist-500">
-          Auto Enhance is live. Portrait retouching and masking tools unlock in
-          later phases — each produces editable adjustments, never destructive filters.
+          Linear & radial masks apply local edits non-destructively. AI subject/sky
+          masks and brush painting unlock once their models are installed.
         </p>
       </div>
     </aside>

@@ -4,6 +4,7 @@ import {
   cloneAdjustments,
   isNeutral,
   lerpAdjustments,
+  makeMask,
   neutralAdjustments,
   neutralGrade,
 } from "../lib/adjustments";
@@ -24,9 +25,13 @@ import type {
   HardwareReport,
   ImageAnalysis,
   ImageMeta,
+  LocalAdjust,
   LutInfo,
+  Mask,
+  MaskType,
   ModelInfo,
   ModelStorage,
+  MotionAdjust,
   PortraitAdjust,
   PortraitMode,
   RawParams,
@@ -68,6 +73,11 @@ interface PortraitState {
   message: string | null;
 }
 
+interface MaskPanelState {
+  open: boolean;
+  activeId: string | null;
+}
+
 interface EditorState {
   section: Section;
   backend: { status: BackendStatus; version?: string; error?: string };
@@ -97,6 +107,7 @@ interface EditorState {
 
   autoEnhance: AutoEnhanceState;
   portrait: PortraitState;
+  maskPanel: MaskPanelState;
   luts: LutInfo[];
   lutError: string | null;
   developing: boolean; // RAW re-decode in progress
@@ -138,6 +149,18 @@ interface EditorState {
   setPortraitField: (field: keyof PortraitAdjust, value: number) => void;
   applyPortrait: () => void;
   cancelPortrait: () => void;
+
+  // masking engine (Phase 4)
+  openMaskPanel: () => void;
+  closeMaskPanel: () => void;
+  addMask: (type: MaskType) => void;
+  removeMask: (id: string) => void;
+  selectMask: (id: string | null) => void;
+  setMaskField: (id: string, field: keyof Mask, value: number | boolean) => void;
+  setMaskLocal: (id: string, field: keyof LocalAdjust, value: number) => void;
+
+  // motion & lens effects (Phase 5)
+  setMotionField: (field: keyof MotionAdjust, value: number | string) => void;
 
   // color grading (Phase 2b)
   setGradeLive: (grade: Grade) => void;
@@ -280,6 +303,7 @@ function loadMeta(
       modelAvailable: get().portrait.modelAvailable,
       message: null,
     },
+    maskPanel: { open: false, activeId: null },
   });
   scheduleRender(get, set, 0);
   api.analyze(meta.id).then((a) => set({ analysis: a })).catch(() => {});
@@ -357,6 +381,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     modelAvailable: true,
     message: null,
   },
+  maskPanel: { open: false, activeId: null },
   luts: [],
   lutError: null,
   developing: false,
@@ -640,6 +665,72 @@ export const useEditor = create<EditorState>((set, get) => ({
   cancelPortrait: () => {
     get().cancelGesture();
     set({ portrait: { ...get().portrait, open: false } });
+  },
+
+  // ---- masking engine (Phase 4) ----
+  openMaskPanel: () => set({ section: "editor", maskPanel: { ...get().maskPanel, open: true } }),
+  closeMaskPanel: () => set({ maskPanel: { ...get().maskPanel, open: false } }),
+
+  addMask: (type) => {
+    if (!get().image) return;
+    const cur = get().adjustments;
+    const mask = makeMask(type, cur.masks.length + 1);
+    const next = cloneAdjustments(cur);
+    next.masks = [...next.masks, mask];
+    set({
+      section: "editor",
+      past: [...get().past, cloneAdjustments(cur)],
+      future: [],
+      adjustments: next,
+      maskPanel: { open: true, activeId: mask.id },
+    });
+    scheduleRender(get, set, 0);
+  },
+
+  removeMask: (id) => {
+    const cur = get().adjustments;
+    if (!cur.masks.some((m) => m.id === id)) return;
+    const next = cloneAdjustments(cur);
+    next.masks = next.masks.filter((m) => m.id !== id);
+    const activeId =
+      get().maskPanel.activeId === id
+        ? next.masks[next.masks.length - 1]?.id ?? null
+        : get().maskPanel.activeId;
+    set({
+      past: [...get().past, cloneAdjustments(cur)],
+      future: [],
+      adjustments: next,
+      maskPanel: { ...get().maskPanel, activeId },
+    });
+    scheduleRender(get, set, 0);
+  },
+
+  selectMask: (id) => set({ maskPanel: { ...get().maskPanel, activeId: id } }),
+
+  setMaskField: (id, field, value) => {
+    const next = cloneAdjustments(get().adjustments);
+    const m = next.masks.find((x) => x.id === id);
+    if (!m) return;
+    (m as unknown as Record<string, number | boolean>)[field] = value;
+    set({ adjustments: next });
+    scheduleRender(get, set);
+  },
+
+  setMaskLocal: (id, field, value) => {
+    const next = cloneAdjustments(get().adjustments);
+    const m = next.masks.find((x) => x.id === id);
+    if (!m) return;
+    (m.local as unknown as Record<string, number>)[field] = value;
+    set({ adjustments: next });
+    scheduleRender(get, set);
+  },
+
+  // ---- motion & lens effects (Phase 5) ----
+  setMotionField: (field, value) => {
+    const next = cloneAdjustments(get().adjustments);
+    (next.motion as unknown as Record<string, number | string>)[field] = value;
+    set({ adjustments: next });
+    scheduleRender(get, set, field === "type" ? 0 : 110);
   },
 
   setGradeLive: (grade) => {

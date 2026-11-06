@@ -15,6 +15,8 @@ from ..schemas import Adjustments
 from ..lut_store import lut_store
 from . import adjustments as adj
 from . import grading
+from . import masks as masks_mod
+from . import motion as motion_mod
 from . import portrait as portrait_mod
 from .color import luminance
 
@@ -55,6 +57,8 @@ def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0,
 
         masks = face_mod.build_masks(img, faces)
         img = portrait_mod.apply_portrait(img, a.portrait, masks)
+    # 5d. Masking engine — local adjustments within linear/radial/brush masks
+    img = masks_mod.apply_masks(img, a.masks, px_scale)
     # 6. Noise reduction (before sharpening)
     img = adj.apply_noise_reduction(img, a.detail.noise_reduction, px_scale)
     # 7. Sharpening
@@ -65,6 +69,8 @@ def render(original: np.ndarray, a: Adjustments, px_scale: float = 1.0,
     # 8. Lens corrections + effects
     img = adj.apply_defringe(img, a.effects.defringe, px_scale)
     img = adj.apply_distortion(img, a.effects.distortion)
+    # 8b. Motion & lens blur (creative, whole-frame)
+    img = motion_mod.apply_motion(img, a.motion, px_scale)
     img = adj.apply_vignette(img, a.effects.vignette)
     img = adj.apply_grain(img, a.effects.grain)
 

@@ -5,6 +5,7 @@ import AdjustPanel from "../editor/AdjustPanel";
 import BottomBar from "../editor/BottomBar";
 import AutoEnhancePanel from "../editor/AutoEnhancePanel";
 import PortraitPanel from "../editor/PortraitPanel";
+import MasksPanel from "../editor/MasksPanel";
 import { IconClose } from "../components/icons";
 
 export default function EditorSection() {
@@ -40,6 +41,7 @@ export default function EditorSection() {
             <PreviewCanvas />
             <AutoEnhancePanel />
             <PortraitPanel />
+            <MasksPanel />
           </div>
         </div>
         <AdjustPanel />

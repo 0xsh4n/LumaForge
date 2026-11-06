@@ -85,6 +85,13 @@ comparison, presets, settings/compatibility report, and high-quality export.
 - Per-mask adjustments, feather, edge refine, invert, opacity, overlay preview,
   stacked & independently editable masks. Optional **SAM 2** for advanced
   segmentation.
+- ✅ **Shipped (classical):** the masking engine core — **Linear & Radial
+  gradient** masks and a **brush** model, each with per-mask local adjustments
+  (exposure/contrast/tone, temperature/tint, saturation/vibrance, clarity,
+  sharpness, **selective blur**), feather, invert, opacity, and stacked editable
+  layers. Masks are parameters (not baked pixels) rendered by the same pipeline;
+  `backend/app/imaging/masks.py` + Settings/editor UI. *Remaining:* AI
+  subject/sky masks (BiRefNet/SAM, needs models) and on-canvas brush painting.
 
 ## Phase 5 — DSLR Look, Depth & Motion *(models + classical)*
 
@@ -97,7 +104,12 @@ comparison, presets, settings/compatibility report, and high-quality export.
 - **Motion & Lens Effects**: directional/radial/zoom/rotational motion blur,
   selectively applied (whole image / background / foreground / subject / painted
   regions) via convolution kernels + masked blur — non-destructive; AI motion is
-  optional. *(§20)*
+  optional.
+- ✅ **Shipped (classical):** whole-frame **motion blur** — directional (line
+  kernel), **zoom** and **spin** — in `backend/app/imaging/motion.py`, with UI in
+  the editor's Motion Blur panel. Selective motion is covered by a mask's
+  **selective blur** local adjustment (Phase 4). *Remaining:* Depth Anything V2
+  depth map → bokeh workspace and model-driven DSLR subject separation. *(§20)*
 
 ## Phase 6 — Upscaling, restoration & GPU scheduler *(models)*
 
