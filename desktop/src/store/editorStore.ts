@@ -25,6 +25,8 @@ import type {
   ImageAnalysis,
   ImageMeta,
   LutInfo,
+  ModelInfo,
+  ModelStorage,
   PortraitAdjust,
   PortraitMode,
   RawParams,
@@ -99,10 +101,19 @@ interface EditorState {
   lutError: string | null;
   developing: boolean; // RAW re-decode in progress
 
+  models: ModelInfo[];
+  modelStorage: ModelStorage | null;
+  modelsLoading: boolean;
+  modelError: string | null;
+
   // --- actions ---
   setSection: (s: Section) => void;
   initBackend: () => Promise<void>;
   loadHardware: () => Promise<void>;
+
+  loadModels: () => Promise<void>;
+  downloadModel: (id: string) => Promise<void>;
+  removeModel: (id: string) => Promise<void>;
 
   importImage: () => Promise<void>;
   openPath: (path: string) => Promise<void>;
@@ -152,6 +163,23 @@ interface EditorState {
     quality: number;
     resizeLongEdge?: number | null;
   }) => Promise<void>;
+}
+
+// ---- model-download progress polling (module scope) -----------------------
+let modelPollTimer: number | undefined;
+
+function ensureModelPolling(get: () => EditorState) {
+  if (modelPollTimer) return;
+  modelPollTimer = window.setInterval(async () => {
+    await get().loadModels();
+    const active = get().models.some(
+      (m) => m.state === "downloading" || m.state === "verifying",
+    );
+    if (!active) {
+      window.clearInterval(modelPollTimer);
+      modelPollTimer = undefined;
+    }
+  }, 1200);
 }
 
 // ---- render scheduler (module scope, outside React) -----------------------
@@ -333,6 +361,11 @@ export const useEditor = create<EditorState>((set, get) => ({
   lutError: null,
   developing: false,
 
+  models: [],
+  modelStorage: null,
+  modelsLoading: false,
+  modelError: null,
+
   setSection: (s) => set({ section: s }),
 
   initBackend: async () => {
@@ -358,6 +391,42 @@ export const useEditor = create<EditorState>((set, get) => ({
     } catch {
       /* non-fatal */
     }
+  },
+
+  loadModels: async () => {
+    set({ modelsLoading: true });
+    try {
+      const res = await api.listModels();
+      set({ models: res.models, modelStorage: res.storage, modelsLoading: false });
+    } catch (e) {
+      set({
+        modelsLoading: false,
+        modelError: e instanceof ApiError ? e.message : "Could not load models",
+      });
+    }
+  },
+
+  downloadModel: async (id) => {
+    set({ modelError: null });
+    try {
+      await api.downloadModel(id);
+      await get().loadModels();
+      ensureModelPolling(get);
+    } catch (e) {
+      // 400s carry an actionable message (manual placement / VLM via Ollama).
+      set({ modelError: e instanceof ApiError ? e.message : "Download failed" });
+      await get().loadModels();
+    }
+  },
+
+  removeModel: async (id) => {
+    set({ modelError: null });
+    try {
+      await api.removeModel(id);
+    } catch (e) {
+      set({ modelError: e instanceof ApiError ? e.message : "Remove failed" });
+    }
+    await get().loadModels();
   },
 
   importImage: async () => {

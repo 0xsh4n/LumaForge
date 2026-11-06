@@ -72,6 +72,12 @@ comparison, presets, settings/compatibility report, and high-quality export.
 - Deferred to a later pass (optional, generative): face restoration
   (GFPGAN/CodeFormer) and 468-point landmarks — gated behind model verification.
 
+> **Groundwork for phases 4–7 (done):** the optional AI models these phases rely
+> on are now cataloged from trusted sources and installable on demand via the
+> **Model Manager** (Settings → AI models) — see the Phase 7 §25 note below and
+> [MODELS.md](MODELS.md). Each phase below still needs its own model inference +
+> rendering built on top.
+
 ## Phase 4 — Masking engine *(models)*  *(§7)*
 
 - AI Subject / Background / Sky masks (**BiRefNet**), Face/Skin masks, Brush,
@@ -114,6 +120,13 @@ comparison, presets, settings/compatibility report, and high-quality export.
   Ollama / ONNX** (Moondream 2, SmolVLM 500M, Gemma 3 4B, Qwen2.5-VL 3B).
   Download/install/remove, status/size/compatibility, runtime & GPU-layer
   selection. Everything works with **no VLM installed**.
+  - ✅ **Foundation shipped:** a trusted model catalog
+    (`backend/app/models_registry.py`) with official, HTTPS-only sources; a
+    Model Manager API (`/api/models` list/status/storage, download with live
+    progress + checksum, remove); and **Settings → AI models** in the UI
+    (download/remove, per-phase grouping, storage path & disk usage). Documented
+    in [MODELS.md](MODELS.md). This unblocks the model-dependent work in phases
+    4–6; what remains per phase is the inference + rendering for each feature.
 
 ## ✅ Phase 8 — Packaging, cross-platform & release *(pipeline complete)*
 

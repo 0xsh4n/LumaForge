@@ -112,6 +112,19 @@ bundle. On **Windows** you get an `.msi` and an NSIS `.exe` installer under
 macOS a `.dmg`. Full instructions, including optional RAW/HEIC codecs and GPU
 setup, are in [docs/INSTALL.md](docs/INSTALL.md).
 
+## AI models (optional)
+
+Manual editing, Auto Enhance, color grading and RAW development are classical
+and need no downloads. The AI features in phases 4–7 (masking, depth & bokeh,
+upscaling, face restoration, the optional Luma Assistant) use optional models
+pulled on demand from their **official sources** — manage them in-app under
+**Settings → AI models**.
+
+They are stored in the per-user data directory (not the repo):
+`%APPDATA%\LumaForge\models\` (Windows), `~/Library/Application Support/LumaForge/models/`
+(macOS), or `~/.local/share/LumaForge/models/` (Linux). The full download-link
+table and manual-install instructions are in **[docs/MODELS.md](docs/MODELS.md)**.
+
 ## Testing
 
 ```bash
@@ -126,7 +139,8 @@ LumaForge/
 ├── backend/            Python processing engine (FastAPI + image pipeline)
 │   ├── app/
 │   │   ├── imaging/    io · color · adjustments · pipeline · hardware
-│   │   ├── routers/    system · images · process · projects
+│   │   ├── routers/    system · images · process · projects · models
+│   │   ├── models_registry.py   trusted AI-model catalog (sources + sizes)
 │   │   ├── store.py    in-memory non-destructive image sessions
 │   │   └── main.py     FastAPI app + sidecar entry
 │   ├── tests/
@@ -135,9 +149,13 @@ LumaForge/
 │   ├── src/            React UI (sections, editor, components, store, lib)
 │   └── src-tauri/      Rust shell, tauri.conf.json, icons, capabilities
 ├── scripts/            setup · dev · build · build_sidecar  (.sh + .ps1)
-├── docs/               ARCHITECTURE · INSTALL · GPU · ROADMAP
-└── models/             downloaded AI model weights (runtime-managed)
+├── docs/               ARCHITECTURE · INSTALL · GPU · MODELS · ROADMAP
+└── models/             dev placeholder — real models live in the user data dir
 ```
+
+> AI models are **not** stored in the repo; they download to the per-user data
+> directory (see [docs/MODELS.md](docs/MODELS.md)). The `models/` folder here is a
+> development placeholder only.
 
 ## Principles
 

@@ -8,18 +8,25 @@ const PHASE1 = [
   { icon: IconExport, title: "High-quality export", body: "Full-resolution JPEG, PNG, WebP or 16-bit TIFF with sRGB profile and metadata." },
 ];
 
-const ROADMAP = [
+const SHIPPED = [
   ["Phase 2", "AI Auto Enhance"],
-  ["Phase 3", "Portrait Retouch"],
+  ["Phase 2b", "Color Grading"],
+  ["Phase 2c", "RAW Development"],
+  ["Phase 3", "Portrait Studio"],
+];
+
+const ROADMAP = [
   ["Phase 4", "Masking engine"],
-  ["Phase 5", "DSLR Look"],
+  ["Phase 5", "DSLR Look · Depth · Motion"],
   ["Phase 6", "Upscaling & restoration"],
+  ["Phase 7", "Color Match · Luma Assistant"],
 ];
 
 export default function HomeSection() {
   const importImage = useEditor((s) => s.importImage);
   const importing = useEditor((s) => s.importing);
   const backend = useEditor((s) => s.backend);
+  const setSection = useEditor((s) => s.setSection);
 
   return (
     <div className="lf-scroll h-full overflow-y-auto">
@@ -55,9 +62,27 @@ export default function HomeSection() {
           </div>
         </div>
 
+        {/* shipped (phases 2–3) */}
+        <div className="mt-10">
+          <SectionLabel>Also in this build</SectionLabel>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {SHIPPED.map(([phase, name]) => (
+              <div
+                key={phase}
+                className="flex items-center gap-2 rounded-lg border border-ink-600 bg-ink-800 px-3 py-2"
+              >
+                <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[10px] font-medium text-teal">
+                  {phase}
+                </span>
+                <span className="text-[13px] text-mist-300">{name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* phase 1 features */}
-        <div className="mt-12">
-          <SectionLabel>In this build · Phase 1</SectionLabel>
+        <div className="mt-10">
+          <SectionLabel>Core engine · Phase 1</SectionLabel>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {PHASE1.map((f) => {
               const Icon = f.icon;
@@ -96,6 +121,16 @@ export default function HomeSection() {
               </div>
             ))}
           </div>
+          <p className="mt-3 text-[13px] leading-relaxed text-mist-500">
+            These features use optional AI models. Download and manage them from{" "}
+            <button
+              onClick={() => setSection("settings")}
+              className="text-forge-400 underline-offset-2 hover:underline"
+            >
+              Settings → AI models
+            </button>
+            . Everything runs locally and offline; nothing is required for manual editing.
+          </p>
         </div>
       </div>
     </div>

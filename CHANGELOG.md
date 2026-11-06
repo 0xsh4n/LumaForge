@@ -44,6 +44,24 @@ Versioning will follow semver once 1.0 ships.
   background exposure/saturation. No geometry change, no generative faces.
 - 10 editable Portrait Studio modes + intensity & naturalness.
 
+### Added — Model Manager & phases 4–7 groundwork
+- Trusted AI-model catalog (`backend/app/models_registry.py`): every optional
+  model for phases 4–7 (BiRefNet, MediaPipe Face Landmarker, SAM 2, Depth
+  Anything V2, Real-ESRGAN, GFPGAN, CodeFormer, optional VLMs) with official,
+  HTTPS-only sources, sizes, licenses and on-disk file names. A host allowlist
+  rejects any non-trusted or plain-HTTP URL.
+- Model Manager API (`/api/models`): list with install status, storage location
+  and disk usage; download with live progress, atomic writes and optional
+  checksum verification; remove. VLM and large/drifting assets are guided to
+  manual install instead of firing a possibly-dead link.
+- **Settings → AI models**: live manager UI — per-phase grouping, size/license/
+  VRAM, download/remove, progress bars, and the exact storage folder. Home now
+  reflects shipped phases 2–3 and links to the manager.
+- YuNet face detection refactored onto the shared registry (no more duplicated
+  URL/path constants).
+- New docs: [docs/MODELS.md](docs/MODELS.md) — download links from safe sources
+  and where models are stored; README and INSTALL updated accordingly.
+
 ### Added — Phase 8: Packaging & release
 - Cross-platform CI (`.github/workflows/ci.yml`): tests on every push/PR; builds
   Windows (.msi + NSIS), macOS (.dmg) and Linux (.deb + AppImage) installers on

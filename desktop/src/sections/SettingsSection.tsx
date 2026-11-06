@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useEditor } from "../store/editorStore";
 import type { PreviewQuality } from "../store/editorStore";
-import { IconChip, IconCheck, IconAlert } from "../components/icons";
+import type { ModelInfo } from "../types";
+import { openExternal } from "../lib/platform";
+import { IconChip, IconCheck, IconAlert, IconExport, IconLayers } from "../components/icons";
 
 export default function SettingsSection() {
   const hardware = useEditor((s) => s.hardware);
@@ -9,10 +11,12 @@ export default function SettingsSection() {
   const backend = useEditor((s) => s.backend);
   const previewQuality = useEditor((s) => s.previewQuality);
   const setPreviewQuality = useEditor((s) => s.setPreviewQuality);
+  const loadModels = useEditor((s) => s.loadModels);
 
   useEffect(() => {
     void loadHardware();
-  }, [loadHardware]);
+    void loadModels();
+  }, [loadHardware, loadModels]);
 
   return (
     <div className="lf-scroll h-full overflow-y-auto">
@@ -116,32 +120,8 @@ export default function SettingsSection() {
           </div>
         </Card>
 
-        {/* AI models (future phases) */}
-        <Card title="AI model management">
-          <p className="text-sm text-mist-500">
-            AI features (Auto Enhance analysis models, face restoration, segmentation,
-            upscaling) download their models on demand starting in Phase 2. None are
-            required for the manual editing engine.
-          </p>
-          <div className="mt-3 space-y-1.5">
-            {[
-              ["Real-ESRGAN (upscaling)", 6],
-              ["GFPGAN / CodeFormer (face restoration)", 3],
-              ["BiRefNet (subject segmentation)", 4],
-              ["MediaPipe (face mesh)", 3],
-            ].map(([name, phase]) => (
-              <div
-                key={name as string}
-                className="flex items-center justify-between rounded-lg border border-ink-600 bg-ink-850 px-3 py-2 text-sm"
-              >
-                <span className="text-mist-300">{name}</span>
-                <span className="rounded bg-ink-700 px-2 py-0.5 text-[11px] text-mist-500">
-                  Phase {phase}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
+        {/* AI model manager */}
+        <ModelManager />
 
         <Card title="About">
           <div className="flex items-center justify-between text-sm">
@@ -210,5 +190,189 @@ function VramBar({ total, used }: { total: number; used: number }) {
         <div className="h-full rounded-full bg-forge-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
+  );
+}
+
+// ---- Model Manager (Phase 7 §25) ------------------------------------------
+
+function ModelManager() {
+  const models = useEditor((s) => s.models);
+  const storage = useEditor((s) => s.modelStorage);
+  const loading = useEditor((s) => s.modelsLoading);
+  const error = useEditor((s) => s.modelError);
+  const download = useEditor((s) => s.downloadModel);
+  const remove = useEditor((s) => s.removeModel);
+
+  const phases = Array.from(new Set(models.map((m) => m.phase))).sort((a, b) => a - b);
+
+  return (
+    <Card title="AI models">
+      <p className="text-sm text-mist-500">
+        The AI features in phases 4–7 (masking, depth &amp; bokeh, upscaling, face
+        restoration and the optional Luma Assistant) use the models below. They are
+        optional and downloaded on demand from their official sources — none are needed
+        for manual editing, Auto Enhance, color grading or RAW development.
+      </p>
+
+      {storage && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-ink-600 bg-ink-850 p-3">
+          <IconLayers width={16} height={16} className="mt-0.5 shrink-0 text-mist-500" />
+          <div className="min-w-0 text-[13px]">
+            <div className="text-mist-300">
+              Stored in{" "}
+              <code className="break-all font-mono text-[12px] text-mist-400">
+                {storage.dir}
+              </code>
+            </div>
+            <div className="mt-0.5 text-mist-500">
+              {storage.installed_count} installed · {storage.total_human} on disk
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-ember/40 bg-ember/10 px-3 py-2 text-[13px] text-mist-200">
+          <IconAlert width={14} height={14} className="mt-0.5 shrink-0 text-ember" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading && models.length === 0 ? (
+        <p className="mt-3 text-sm text-mist-500">Loading models…</p>
+      ) : (
+        <div className="mt-4 space-y-5">
+          {phases.map((phase) => (
+            <div key={phase}>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-mist-500">
+                Phase {phase}
+              </div>
+              <div className="space-y-2">
+                {models
+                  .filter((m) => m.phase === phase)
+                  .map((m) => (
+                    <ModelRow
+                      key={m.id}
+                      m={m}
+                      onDownload={() => void download(m.id)}
+                      onRemove={() => void remove(m.id)}
+                    />
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function sizeLabel(mb: number): string {
+  if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
+  if (mb < 1) return "<1 MB";
+  return `${Math.round(mb)} MB`;
+}
+
+function ModelRow({
+  m,
+  onDownload,
+  onRemove,
+}: {
+  m: ModelInfo;
+  onDownload: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-ink-600 bg-ink-850 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-mist-100">{m.name}</span>
+            {m.installed && (
+              <span className="inline-flex items-center gap-1 rounded bg-teal/15 px-1.5 py-0.5 text-[10px] text-teal">
+                <IconCheck width={10} height={10} /> Installed
+              </span>
+            )}
+            {m.kind === "vlm" && (
+              <span className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-mist-500">VLM</span>
+            )}
+          </div>
+          <div className="mt-0.5 text-[13px] leading-relaxed text-mist-500">{m.feature}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-mist-600">
+            <span>{sizeLabel(m.size_mb)}</span>
+            <span>·</span>
+            <span>{m.license}</span>
+            {m.min_vram_mb > 0 && (
+              <>
+                <span>·</span>
+                <span>~{(m.min_vram_mb / 1024).toFixed(1)} GB VRAM or CPU</span>
+              </>
+            )}
+          </div>
+          {m.note && <div className="mt-1 text-[11px] italic text-mist-600">{m.note}</div>}
+        </div>
+        <ModelAction m={m} onDownload={onDownload} onRemove={onRemove} />
+      </div>
+      {m.state === "downloading" && (
+        <div className="mt-2">
+          <div className="mb-1 flex justify-between text-[10px] text-mist-500">
+            <span>Downloading…</span>
+            <span className="font-mono">{m.progress.pct}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-600">
+            <div
+              className="h-full rounded-full bg-forge-500 transition-all"
+              style={{ width: `${Math.max(3, m.progress.pct)}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModelAction({
+  m,
+  onDownload,
+  onRemove,
+}: {
+  m: ModelInfo;
+  onDownload: () => void;
+  onRemove: () => void;
+}) {
+  if (m.installed) {
+    return (
+      <button
+        onClick={onRemove}
+        className="shrink-0 rounded-lg border border-ink-600 px-3 py-1.5 text-xs text-mist-400 transition-colors hover:border-ember/50 hover:text-ember"
+      >
+        Remove
+      </button>
+    );
+  }
+  if (m.state === "downloading") {
+    return <span className="shrink-0 font-mono text-xs text-forge-300">{m.progress.pct}%</span>;
+  }
+  // VLMs install via Ollama; large/drifting assets are placed manually. Both
+  // link to the official source page rather than auto-downloading.
+  if (m.kind === "vlm" || !m.auto_downloadable) {
+    return (
+      <button
+        onClick={() => void openExternal(m.source_page)}
+        className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-ink-600 px-3 py-1.5 text-xs text-mist-300 transition-colors hover:border-ink-500"
+        title={m.source_page}
+      >
+        {m.kind === "vlm" ? "Via Ollama" : "Get model"}
+        <IconExport width={12} height={12} />
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={onDownload}
+      className="shrink-0 rounded-lg bg-forge-500/15 px-3 py-1.5 text-xs font-medium text-forge-300 transition-colors hover:bg-forge-500/25"
+    >
+      Download
+    </button>
   );
 }

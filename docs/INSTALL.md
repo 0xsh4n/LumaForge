@@ -56,6 +56,24 @@ phase; see ROADMAP.)
 #   Windows:  .\scripts\dev.ps1   /   .\scripts\dev.ps1 -Browser
 ```
 
+### AI models (optional)
+
+LumaForge works fully without any AI models — manual editing, Auto Enhance,
+color grading and RAW development are all classical. The AI features in phases
+4–7 (masking, depth & bokeh, upscaling, face restoration, the optional Luma
+Assistant) use optional models downloaded on demand from their **official
+sources**.
+
+- **In the app:** open **Settings → AI models** to download, inspect and remove
+  models. It shows the exact folder they are stored in and how much disk they use.
+- **Storage location** (per-user data dir, *not* the repo):
+  - Windows `%APPDATA%\LumaForge\models\`
+  - macOS `~/Library/Application Support/LumaForge/models/`
+  - Linux `~/.local/share/LumaForge/models/` (or `$LUMAFORGE_DATA_DIR/models/`)
+- **Manual install & full link table:** see **[MODELS.md](MODELS.md)** — download
+  from the official link and save it under the models folder with the exact file
+  name listed there.
+
 ### Build the installable app
 
 The backend is frozen into a platform-specific sidecar executable, then Tauri

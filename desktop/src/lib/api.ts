@@ -9,6 +9,8 @@ import type {
   ImageAnalysis,
   ImageMeta,
   LutInfo,
+  ModelInfo,
+  ModelListResponse,
   PortraitMode,
   RawParams,
 } from "../types";
@@ -239,6 +241,19 @@ export const api = {
 
   async recentProjects(): Promise<{ path: string; name: string; opened_at: string }[]> {
     return jsonFetch("/api/projects/recent");
+  },
+
+  // ---- Model Manager (Phase 7 §25) ----
+  async listModels(): Promise<ModelListResponse> {
+    return jsonFetch("/api/models");
+  },
+
+  async downloadModel(id: string): Promise<ModelInfo> {
+    return jsonFetch(`/api/models/${id}/download`, { method: "POST" });
+  },
+
+  async removeModel(id: string): Promise<void> {
+    await jsonFetch(`/api/models/${id}`, { method: "DELETE" });
   },
 };
 

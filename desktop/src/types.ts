@@ -210,6 +210,48 @@ export interface HardwareReport {
   };
 }
 
+// ---- Model Manager (Phase 7 §25) ----
+export type ModelState = "available" | "installed" | "downloading" | "verifying" | "error";
+
+export interface ModelProgress {
+  state: string;
+  downloaded: number;
+  total: number;
+  pct: number;
+  error: string | null;
+}
+
+export interface ModelInfo {
+  id: string;
+  name: string;
+  phase: number;
+  feature: string;
+  filename: string;
+  source_page: string;
+  license: string;
+  size_mb: number;
+  kind: "image" | "vlm";
+  min_vram_mb: number;
+  note: string;
+  auto_downloadable: boolean;
+  installed: boolean;
+  disk_bytes: number;
+  state: ModelState;
+  progress: ModelProgress;
+}
+
+export interface ModelStorage {
+  dir: string;
+  total_bytes: number;
+  total_human: string;
+  installed_count: number;
+}
+
+export interface ModelListResponse {
+  models: ModelInfo[];
+  storage: ModelStorage;
+}
+
 export interface ExportResult {
   path: string;
   width: number;

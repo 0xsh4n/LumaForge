@@ -17,14 +17,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ..config import get_settings
+from .. import models_registry as reg
 from .color import to_uint8
 
-YUNET_FILE = "face_detection_yunet_2023mar.onnx"
-YUNET_URL = (
-    "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/"
-    "models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
-)
+# The YuNet detector is one entry in the central model registry, so its source
+# URL, size and storage path live there (and are shown in Settings → Model
+# Manager) rather than being duplicated here.
+_YUNET_ID = "yunet_face"
 
 _lock = threading.Lock()
 _detector = None  # lazily created cv2.FaceDetectorYN
@@ -42,23 +41,31 @@ class Face:
     score: float
 
 
+def _spec() -> reg.ModelSpec:
+    spec = reg.get(_YUNET_ID)
+    assert spec is not None, "YuNet must be registered in models_registry"
+    return spec
+
+
 def model_path() -> Path:
-    return get_settings().models_dir / YUNET_FILE
+    return reg.model_path(_spec())
 
 
 def model_available() -> bool:
-    p = model_path()
-    return p.exists() and p.stat().st_size > 100_000
+    return reg.is_installed(_spec())
 
 
 def ensure_model() -> bool:
     """Download the YuNet model if missing. Returns True if available."""
     if model_available():
         return True
+    spec = _spec()
+    if not reg.is_safe_url(spec.url):
+        return False
     p = model_path()
     p.parent.mkdir(parents=True, exist_ok=True)
     try:
-        urllib.request.urlretrieve(YUNET_URL, p)  # noqa: S310 (fixed trusted URL)
+        urllib.request.urlretrieve(spec.url, p)  # noqa: S310 (registry URL is https + allowlisted)
     except Exception:
         return False
     return model_available()

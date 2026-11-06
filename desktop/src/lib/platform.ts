@@ -76,6 +76,21 @@ export function pickFile(accept: string): Promise<File | null> {
   });
 }
 
+/** Open a URL in the user's default browser (Tauri) or a new tab (web).
+ *  Used for official model download pages in the Model Manager. */
+export async function openExternal(url: string): Promise<void> {
+  if (isTauri()) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-shell");
+      await open(url); // permitted by the "shell:default" capability
+      return;
+    } catch {
+      /* fall through to window.open */
+    }
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 /** Trigger a browser download of a blob (web export fallback). */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
